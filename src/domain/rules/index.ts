@@ -1,8 +1,9 @@
 import type { Rule } from "../rule.js";
+import { currencyMixed, livemodeMismatch } from "./account.js";
 import { paymentMethodMissingOnActive, trialEndingWithoutPaymentMethod } from "./customers.js";
-import { subscriptionCancelWithoutWinback, subscriptionDelinquent } from "./subscriptions.js";
 import { dunningRetriesExhausted, invoiceStuckOpen, invoiceUncollectible } from "./invoices.js";
 import { portalMissing, portalNoCancellation, portalNoLegalLinks, portalNoPaymentMethodUpdate } from "./portal.js";
+import { subscriptionCancelWithoutWinback, subscriptionDelinquent } from "./subscriptions.js";
 import { taxAutomaticDisabled, taxBehaviorUnspecified, taxProductCodeMissing, taxSettingsIncomplete } from "./tax.js";
 import {
   webhookApiVersionDrift,
@@ -40,4 +41,6 @@ export const RULES: readonly Rule[] = [
   taxSettingsIncomplete,
   taxBehaviorUnspecified,
   taxProductCodeMissing,
+  currencyMixed,
+  livemodeMismatch,
 ];
