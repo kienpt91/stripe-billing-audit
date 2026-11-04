@@ -28,7 +28,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
-    "demo": "npm run build && node scripts/demo.ts"
+    "demo": "npm run build && node scripts/demo.ts",
+    "check:deps-age": "node scripts/check-dep-age.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
