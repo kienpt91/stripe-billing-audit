@@ -2,6 +2,7 @@ import type { Rule } from "../rule.js";
 import { paymentMethodMissingOnActive, trialEndingWithoutPaymentMethod } from "./customers.js";
 import { subscriptionCancelWithoutWinback, subscriptionDelinquent } from "./subscriptions.js";
 import { dunningRetriesExhausted, invoiceStuckOpen, invoiceUncollectible } from "./invoices.js";
+import { portalMissing, portalNoCancellation, portalNoLegalLinks, portalNoPaymentMethodUpdate } from "./portal.js";
 import {
   webhookApiVersionDrift,
   webhookDeliveriesFailing,
@@ -30,4 +31,8 @@ export const RULES: readonly Rule[] = [
   invoiceStuckOpen,
   invoiceUncollectible,
   dunningRetriesExhausted,
+  portalMissing,
+  portalNoPaymentMethodUpdate,
+  portalNoCancellation,
+  portalNoLegalLinks,
 ];
