@@ -31,10 +31,14 @@ const systemClock: Clock = { nowSeconds: () => Math.floor(Date.now() / 1000) };
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 const MAX_CUSTOMER_LOOKUPS = 50;
 
-function usage(io: Io, message: string): number {
-  io.err(`${TOOL_NAME}: ${message}\nRun with --help for usage.\n`);
+/** Usage errors are redacted like everything else: an option name or value may be a key typed in the wrong place. */
+function usage(io: Io, message: string, env: Readonly<Record<string, string | undefined>> = {}): number {
+  io.err(redactSecrets(`${TOOL_NAME}: ${message}\nRun with --help for usage.\n`, [(env.STRIPE_API_KEY ?? "").trim()]));
   return EXIT_USAGE;
 }
+
+/** Node reads `NODE_USE_ENV_PROXY` to send `fetch` through HTTP(S)_PROXY. */
+const isOn = (value: string | undefined): boolean => value !== undefined && /^(1|true|yes|on)$/i.test(value.trim());
 
 function checklist(format: Format): string {
   return format === "json" ? renderChecklistJson() : format === "markdown" ? renderChecklistMarkdown() : renderChecklistTerminal();
@@ -42,18 +46,24 @@ function checklist(format: Format): string {
 
 async function audit(options: AuditOptions, env: Readonly<Record<string, string | undefined>>, io: Io, deps: Deps): Promise<number> {
   const key = classifyKey(env.STRIPE_API_KEY);
-  if (!key.ok) return usage(io, key.error);
+  if (!key.ok) return usage(io, key.error, env);
   const base = parseApiBase(options.apiBase);
-  if (!base.ok) return usage(io, base.error);
+  if (!base.ok) return usage(io, base.error, env);
+  if (isOn(env.NODE_USE_ENV_PROXY)) {
+    return usage(io, "NODE_USE_ENV_PROXY is set, so fetch would hand the API key to the proxy named in HTTP_PROXY / HTTPS_PROXY. Unset it for this tool.", env);
+  }
   if (!base.value.overridden && env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
-    return usage(io, "NODE_TLS_REJECT_UNAUTHORIZED=0 disables certificate checks; refusing to send an API key to api.stripe.com that way.");
+    return usage(io, "NODE_TLS_REJECT_UNAUTHORIZED=0 disables certificate checks; refusing to send an API key to api.stripe.com that way.", env);
   }
   const warnings: string[] = [];
   if (key.value.kind === "secret") {
     if (!options.allowUnrestrictedKey) {
-      return usage(io, "STRIPE_API_KEY is an unrestricted secret key (sk_...). Create a restricted key with read permissions, or pass --allow-unrestricted-key to accept the risk.");
+      return usage(io, "STRIPE_API_KEY is an unrestricted secret key (sk_...). Create a restricted key with read permissions, or pass --allow-unrestricted-key to accept the risk.", env);
     }
     warnings.push("An unrestricted secret key is in use. This tool only sends GET requests, but the key itself could write. Prefer a restricted key with read permissions.");
+  }
+  if ((env.NODE_EXTRA_CA_CERTS ?? "").trim() !== "") {
+    warnings.push("NODE_EXTRA_CA_CERTS adds trusted certificate authorities: the connection to Stripe trusts them as well, so whoever holds one can read the API key in transit.");
   }
   if (base.value.overridden) warnings.push(`API base overridden to ${base.value.origin}; this is a test setup, not Stripe.`);
 
@@ -106,7 +116,7 @@ async function audit(options: AuditOptions, env: Readonly<Record<string, string 
 /** Runs the CLI with everything it touches passed in: arguments, environment, output and (for tests) the network. */
 export async function runCli(argv: readonly string[], env: Readonly<Record<string, string | undefined>>, io: Io, deps: Deps = {}): Promise<number> {
   const command = parseCommand(argv);
-  if (!command.ok) return usage(io, command.error);
+  if (!command.ok) return usage(io, command.error, env);
   switch (command.value.kind) {
     case "help":
       io.out(HELP);
