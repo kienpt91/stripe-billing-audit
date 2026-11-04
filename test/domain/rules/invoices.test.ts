@@ -41,8 +41,12 @@ describe("dunning-retries-exhausted", () => {
   it("flags attempted invoices with no next attempt", () => {
     const r = run(dunningRetriesExhausted, { openInvoices: ok([done(), done({ id: "in_2", attemptCount: 2 })]) });
     expect(r.finding?.severity).toBe("medium");
-    expect(r.finding?.evidence[0]).toContain("attempts per invoice between 2 and 4");
+    expect(r.finding?.evidence[0]).toContain("between 2 and 4 attempts each");
     expect(r.finding?.evidence[1]).toBe("Total due 98.00 USD.");
+  });
+
+  it("says how many attempts when they are all equal", () => {
+    expect(run(dunningRetriesExhausted, { openInvoices: ok([done()]) }).finding?.evidence[0]).toContain("4 attempts each, no next attempt scheduled");
   });
 
   it("ignores invoices that are still scheduled, never attempted or sent for manual payment", () => {

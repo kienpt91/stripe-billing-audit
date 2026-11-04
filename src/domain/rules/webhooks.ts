@@ -108,7 +108,7 @@ export const webhookApiVersionDrift = defineRule({
     if (drifted.length === 0) return passed;
     return failed(
       "medium",
-      `${plural(drifted.length, "endpoint")} use a different API version than the account`,
+      `API version differs from the account's on ${plural(drifted.length, "endpoint")}`,
       [`Account default version: ${account.apiVersion}.`, ...drifted.slice(0, 5).map((e) => `${label(e)} is pinned to ${e.apiVersion}.`)],
     );
   },

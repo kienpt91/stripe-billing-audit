@@ -34,7 +34,7 @@ export const paymentMethodMissingOnActive = defineRule({
     const live = subscriptions.filter((s) => s.status === "active" || s.status === "past_due");
     const { missing, unchecked } = withoutPaymentMethod(live, customers);
     if (missing.length === 0) return passed;
-    return failed("high", `${plural(missing.length, "subscription")} charge automatically with no payment method on file`, [
+    return failed("high", `${plural(missing.length, "subscription")} with no payment method on file, set to charge automatically`, [
       `${plural(missing.length, "subscription")}: ${sampleIds(missing.map((s) => s.id))}.`,
       "Neither the subscription nor its customer has a default payment method or source.",
       ...coverage(customers, unchecked),

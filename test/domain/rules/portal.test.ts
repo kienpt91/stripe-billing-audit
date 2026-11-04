@@ -5,8 +5,8 @@ import { run } from "../../support/run-rule.js";
 
 describe("portal-missing", () => {
   it("flags a subscription business without an active configuration", () => {
-    expect(run(portalMissing, { portalConfigurations: ok([]) }).finding?.severity).toBe("medium");
-    expect(run(portalMissing, { portalConfigurations: ok([portal({ active: false })]) }).finding?.evidence[0]).toBe("1 portal configuration(s) listed, none active.");
+    expect(run(portalMissing, { portalConfigurations: ok([]) }).finding?.evidence[0]).toBe("No portal configuration exists.");
+    expect(run(portalMissing, { portalConfigurations: ok([portal({ active: false })]) }).finding?.evidence[0]).toBe("1 portal configuration listed, none active.");
   });
 
   it("passes with an active configuration and does not apply without subscriptions", () => {

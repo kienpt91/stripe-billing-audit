@@ -55,7 +55,7 @@ export const dunningRetriesExhausted = defineRule({
     const lower = atLeast(ctx.truncated.has("openInvoices"));
     const attempts = done.map((i) => i.attemptCount);
     return failed("medium", `${lower}${plural(done.length, "invoice")} open with no retry left`, [
-      `${sampleIds(done.map((i) => i.id))}; attempts per invoice between ${Math.min(...attempts)} and ${Math.max(...attempts)}, no next attempt scheduled.`,
+      `${sampleIds(done.map((i) => i.id))}; ${Math.min(...attempts) === Math.max(...attempts) ? `${plural(Math.min(...attempts), "attempt")} each` : `between ${Math.min(...attempts)} and ${Math.max(...attempts)} attempts each`}, no next attempt scheduled.`,
       `Total due ${totalsByCurrency(done.map((i) => ({ amount: i.amountDue, currency: i.currency })))}.`,
     ]);
   },

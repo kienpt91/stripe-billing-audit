@@ -21,7 +21,7 @@ export const portalMissing = defineRule({
   evaluate({ portalConfigurations, subscriptions, prices }) {
     if (!isSubscriptionBusiness({ subscriptions, prices })) return notApplicable("no subscriptions or recurring prices");
     return effective(portalConfigurations) === null
-      ? failed("medium", "No active Billing portal configuration", [`${portalConfigurations.length} portal configuration(s) listed, none active.`])
+      ? failed("medium", "No active Billing portal configuration", [`${portalConfigurations.length === 0 ? "No portal configuration exists" : `${portalConfigurations.length} portal configuration${portalConfigurations.length === 1 ? "" : "s"} listed, none active`}.`])
       : passed;
   },
 });
