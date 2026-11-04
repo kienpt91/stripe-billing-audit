@@ -1,4 +1,4 @@
-# 0004. Personal data: never requested, never kept
+# 0004. Personal data: little is fetched, none is kept or printed
 
 Status: accepted
 
@@ -12,7 +12,7 @@ Billing audits are done by freelancers and consultants for clients. The report g
 - **No expansion, no search.** The allowlist has no `expand` parameter and no search endpoint.
 - **Customers: payment state only.** The payment-method checks need to know whether a customer has a default payment method. That information exists only on the customer object, so the tool retrieves `GET /v1/customers/{id}` for the customers of subscriptions that have no payment method of their own, at most 50 per run, and decodes a single boolean. `--skip-customer-lookup` disables this and the two checks that need it.
 - **Events: opt-in.** Event payloads embed full objects. Reading failed webhook deliveries (`/v1/events?delivery_success=false`, one page of 25) is off unless `--include-events` is given, and only the type, time and delivery counter are decoded; `data` is never read.
-- **Ids are shortened** in every report (`sub_1QwErT…`), and webhook URLs are reduced to scheme, host and a masked path, because URLs often carry a secret.
+- **Ids are shortened** in every report (`sub_1QwErT…`). **Webhook URLs** often carry a secret, so they are reduced to scheme, host and path, where every path segment that is not a short lowercase word (letters and hyphens, at most 20 characters) is replaced by `…`, and the query string, fragment and credentials are dropped. What is not masked: the host (it identifies the endpoint, so a secret placed in a subdomain would be shown) and a secret that is itself a short lowercase word in a path segment. Endpoints are compared for duplicates on a fingerprint of the whole URL (query included), which is never printed.
 - **Tests plant personal data** in every fixture (emails, names, addresses, phone numbers, a webhook signing secret, a URL token) and assert that none of it appears in the terminal, JSON or Markdown output, with every option on.
 
 ## Consequences
