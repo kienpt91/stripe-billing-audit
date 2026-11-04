@@ -45,6 +45,8 @@ export interface Rule {
   readonly category: Category;
   /** One line, shown in the check list of the report. */
   readonly summary: string;
+  /** The severities this rule can report, for the documentation (docs/checks.md). */
+  readonly severity: string;
   readonly requires: readonly FactKey[];
   readonly why: string;
   readonly fix: string;
@@ -55,6 +57,7 @@ export interface RuleSpec<K extends FactKey> {
   readonly id: string;
   readonly category: Category;
   readonly summary: string;
+  readonly severity: string;
   readonly requires: readonly K[];
   readonly why: string;
   readonly fix: string;

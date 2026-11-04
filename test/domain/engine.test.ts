@@ -8,7 +8,7 @@ import { MANUAL_ITEMS } from "../../src/domain/manual.js";
 import type { Severity } from "../../src/domain/severity.js";
 import { account, facts, NOW, ok, THRESHOLDS, unreadable } from "../support/builders.js";
 
-const base = { category: "account", why: "w", fix: "f" } as const;
+const base = { category: "account", severity: "low", why: "w", fix: "f" } as const;
 const needsSubs = defineRule({ ...base, id: "needs-subs", summary: "s", requires: ["subscriptions"], evaluate: () => passed });
 const bad = (id: string, severity: Severity) => defineRule({ ...base, id, summary: id, requires: [], evaluate: () => failed(severity, `${id} title`, ["e"]) });
 const na = defineRule({ ...base, id: "na", summary: "s", requires: [], evaluate: () => notApplicable("because") });
