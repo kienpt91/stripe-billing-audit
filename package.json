@@ -1,0 +1,39 @@
+{
+  "name": "stripe-billing-audit",
+  "version": "0.1.0",
+  "description": "Read-only CLI that audits the billing setup of a Stripe account with a restricted key and reports concrete gaps with evidence and a suggested fix.",
+  "keywords": [
+    "stripe",
+    "billing",
+    "subscriptions",
+    "webhooks",
+    "audit",
+    "cli"
+  ],
+  "license": "MIT",
+  "author": "Kien Phan",
+  "type": "module",
+  "bin": {
+    "stripe-billing-audit": "dist/bin.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "demo": "npm run build && node scripts/demo.ts"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}
