@@ -1,0 +1,71 @@
+Billing reliability checklist: what the Stripe API cannot show, to check by hand
+
+Failed payments
+  [ ] Retry schedule and the state after the last retry
+      Dashboard, Billing, Revenue recovery, Retries. Smart Retries (or a custom schedule) is on, the
+      number of retries and the window suit your product, and the setting for what happens to the
+      subscription when the last retry fails (cancel, mark unpaid, leave past due) matches how your
+      application treats access. Retry settings cannot be read through the API.
+
+  [ ] Failed-payment and renewal emails
+      Dashboard, Settings, Billing, Subscriptions and emails. Emails for failed payments, upcoming
+      renewals and expiring cards are on or replaced by your own, and each carries a link where the
+      customer can update the card (a Billing portal session). Email settings cannot be read through
+      the API.
+
+Webhooks
+  [ ] Webhook handler quality
+      In your code, not in Stripe: the Stripe-Signature header is verified against the raw body with
+      the endpoint's signing secret, the handler answers 2xx fast and does the work asynchronously,
+      processing is idempotent on event.id, out-of-order delivery is tolerated (fetch the current
+      object instead of trusting the payload), and events can be replayed after an outage.
+
+  [ ] Alerts for failing webhook endpoints
+      Dashboard, Developers, Webhooks. Email alerts for failing endpoints go to a mailbox somebody
+      reads, and someone owns the response.
+
+Application
+  [ ] Access follows subscription state
+      The application grants and removes access from subscription status (active, trialing,
+      past_due, unpaid, canceled, paused) according to a written policy, and a scheduled
+      reconciliation compares your records with the Stripe API so a missed webhook cannot leave a
+      customer with the wrong access for long.
+
+Retention
+  [ ] Win-back after a cancellation
+      A message or offer goes out when a cancellation is scheduled (customer.subscription.updated
+      with cancel_at_period_end) and after it takes effect (customer.subscription.deleted), and the
+      cancellation reasons collected by the Billing portal are read by someone.
+
+API
+  [ ] API version pinned in code
+      The SDK and the Stripe-Version header your application sends are pinned and upgraded on
+      purpose, with a test against the new version before the account default or a webhook endpoint
+      is moved.
+
+Security
+  [ ] Keys and dashboard access
+      Each service uses its own restricted key with the permissions it needs, no secret key is in a
+      client or a repository, keys are rotated on a schedule and when people leave, two-step
+      verification is required for every dashboard user, and roles follow least privilege.
+
+Testing
+  [ ] Lifecycle tested with test clocks
+      Trial end, successful and failed renewals, upgrades with proration and cancellation have been
+      exercised in test mode with test clocks and the webhook handler observed through each of them.
+
+Payments
+  [ ] Authentication-required payments
+      Off-session renewals that need 3D Secure move the invoice to a state your application handles
+      (invoice.payment_action_required), and customers receive a link to authenticate. Radar rules
+      do not block legitimate renewals.
+
+Customer communication
+  [ ] Receipts, invoices and branding
+      Receipts and invoice emails are on, carry the support contact and legal details of the
+      business, and the invoice footer and tax IDs are filled in for the countries you invoice.
+
+Disputes
+  [ ] Dispute handling
+      charge.dispute.created reaches a human who submits evidence before the deadline, and refunds
+      follow a written policy.

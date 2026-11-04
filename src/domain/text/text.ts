@@ -96,3 +96,31 @@ export function clip(text: string, max: number): string {
   const chars = Array.from(text);
   return chars.length <= max ? text : chars.slice(0, Math.max(0, max - 1)).join("") + ELLIPSIS;
 }
+
+const MARKDOWN_SPECIALS = "\\`*_{}[]()#+-.!|~$@:=";
+
+/** Single-line markdown text in which nothing can form a tag, link, image, mention, table break or list. */
+export function escapeMarkdown(text: string, max?: number): string {
+  let out = "";
+  for (const ch of render(text, false, max)) {
+    out += ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch === "&" ? "&amp;" : MARKDOWN_SPECIALS.includes(ch) ? `\\${ch}` : ch;
+  }
+  return out;
+}
+
+/** Word-wraps plain text to `width` columns, indenting every line by `indent` spaces. */
+export function wrap(text: string, width: number, indent: number): string {
+  const pad = " ".repeat(indent);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(/\s+/).filter((w) => w.length > 0)) {
+    if (line.length > 0 && indent + line.length + 1 + word.length > width) {
+      lines.push(pad + line);
+      line = word;
+    } else {
+      line = line.length === 0 ? word : `${line} ${word}`;
+    }
+  }
+  if (line.length > 0) lines.push(pad + line);
+  return lines.join("\n");
+}

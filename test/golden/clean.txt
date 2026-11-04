@@ -1,0 +1,12 @@
+stripe-billing-audit 0.1.0: read-only Stripe billing audit
+Account acct_1AbCdE…, US, default currency usd
+Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
+Checked 2026-10-26T07:33:20Z, 17 requests (GET only)
+
+No findings.
+
+Not readable through the Stripe API (see --checklist for what to check by hand):
+- Retry schedule and the state after the last retry
+- Failed-payment and renewal emails
+
+Summary: 0 findings; checks: 23 passed, 0 failed, 2 not applicable, 0 skipped; exit code 0 (nothing at or above the fail-on severity)
