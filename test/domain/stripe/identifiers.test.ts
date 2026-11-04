@@ -48,6 +48,20 @@ describe("safeUrl", () => {
     expect(safeUrl("https://api.example.com/x")?.development).toBe(false);
   });
 
+  it("masks every path segment that is not a short plain word", () => {
+    expect(safeUrl("https://x.example.com/hooks/abc123/stripe")?.display).toBe("https://x.example.com/hooks/…/stripe");
+    expect(safeUrl("https://x.example.com/api/v1/token-AbC/stripe-webhook")?.display).toBe("https://x.example.com/api/…/…/stripe-webhook");
+    expect(safeUrl("https://x.example.com/Hooks/Stripe")?.display).toBe("https://x.example.com/…/…");
+  });
+
+  it("flags more private and non-routable address ranges as development hosts", () => {
+    for (const host of ["http://[fd12:3456::1]/x", "http://[fe80::1]/x", "http://[::ffff:10.0.0.1]/x", "http://100.64.1.1/x", "http://100.127.255.254/x", "http://0.0.0.0/x"]) {
+      expect(safeUrl(host)?.development, host).toBe(true);
+    }
+    expect(safeUrl("http://100.128.0.1/x")?.development).toBe(false);
+    expect(safeUrl("http://[2606:4700::1]/x")?.development).toBe(false);
+  });
+
   it("rejects non-http URLs, junk and oversized input", () => {
     expect(safeUrl("ftp://example.com")).toBeNull();
     expect(safeUrl("not a url")).toBeNull();

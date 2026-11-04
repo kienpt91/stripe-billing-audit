@@ -131,16 +131,16 @@ export const webhookDuplicateUrls = defineRule({
     const groups = new Map<string, WebhookEndpoint[]>();
     for (const e of webhookEndpoints.filter(enabled)) {
       if (e.url === null) continue;
-      groups.set(e.url.display, [...(groups.get(e.url.display) ?? []), e]);
+      groups.set(e.url.identity, [...(groups.get(e.url.identity) ?? []), e]);
     }
-    const overlapping = [...groups.entries()].filter(([, list]) =>
+    const overlapping = [...groups.values()].filter((list) =>
       list.some((a, i) => list.slice(i + 1).some((b) => a.enabledEvents.includes("*") || b.enabledEvents.includes("*") || a.enabledEvents.some((x) => b.enabledEvents.includes(x)))),
     );
     if (overlapping.length === 0) return passed;
     return failed(
       "low",
       "Several endpoints deliver the same events to one URL",
-      overlapping.map(([url, list]) => `${url} is used by ${list.map((e) => shortId(e.id)).join(", ")}.`),
+      overlapping.map((list) => `${list[0]?.url?.display ?? "an unreadable URL"} is used by ${list.map((e) => shortId(e.id)).join(", ")}.`),
     );
   },
 });

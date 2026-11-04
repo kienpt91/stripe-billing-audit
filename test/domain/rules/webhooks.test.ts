@@ -137,6 +137,16 @@ describe("webhook-duplicate-urls", () => {
     expect(run(webhookDuplicateUrls, { webhookEndpoints: ok([a, { ...b, enabledEvents: ["*"] }]) }).status).toBe("failed");
   });
 
+  it("tells apart URLs that differ only in the query or in a masked path segment", () => {
+    const queryA = endpoint({ id: "we_1aaaaaaaaaaa", url: safeUrl("https://hooks.example.com/stripe?env=prod") });
+    const queryB = endpoint({ id: "we_2bbbbbbbbbbb", url: safeUrl("https://hooks.example.com/stripe?env=staging") });
+    expect(run(webhookDuplicateUrls, { webhookEndpoints: ok([queryA, queryB]) }).status).toBe("passed");
+    const tokenA = endpoint({ id: "we_1aaaaaaaaaaa", url: safeUrl("https://hooks.example.com/stripe/0123456789abcdefghijklmnop") });
+    const tokenB = endpoint({ id: "we_2bbbbbbbbbbb", url: safeUrl("https://hooks.example.com/stripe/ZYXWVUTSRQPONMLKJIHGFEDCBA") });
+    expect(run(webhookDuplicateUrls, { webhookEndpoints: ok([tokenA, tokenB]) }).status).toBe("passed");
+    expect(run(webhookDuplicateUrls, { webhookEndpoints: ok([queryA, { ...queryA, id: "we_3ccccccccccc" }]) }).status).toBe("failed");
+  });
+
   it("passes for disjoint events, different URLs, unreadable URLs and disabled endpoints", () => {
     expect(run(webhookDuplicateUrls, { webhookEndpoints: ok([a, { ...b, enabledEvents: ["invoice.voided"] }]) }).status).toBe("passed");
     expect(run(webhookDuplicateUrls, { webhookEndpoints: ok([a, { ...b, url: safeUrl("https://other.example.com/x") }]) }).status).toBe("passed");

@@ -40,20 +40,49 @@ const DEV_SUFFIXES = [
 
 function isPrivateOrLoopbackIp(host: string): boolean {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
-  if (!m) return host === "[::1]" || host === "[::]";
+  if (!m) {
+    // IPv6: loopback, unspecified, unique local (fc00::/7), link local (fe80::/10) and IPv4-mapped addresses
+    return host === "[::1]" || host === "[::]" || /^\[(?:f[cd][0-9a-f]{2}|fe[89ab][0-9a-f]|::ffff):/.test(host);
+  }
   const a = Number(m[1]);
   const b = Number(m[2]);
-  return a === 0 || a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 169 && b === 254);
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 192 && b === 168) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 169 && b === 254) ||
+    (a === 100 && b >= 64 && b <= 127)
+  );
 }
 
 export interface SafeUrl {
   readonly scheme: "http" | "https";
   readonly host: string;
-  /** Printable form: no credentials, no query, no fragment, long path segments masked. */
+  /** Printable form: no credentials, no query, no fragment, every path segment that is not a short plain word masked. */
   readonly display: string;
+  /**
+   * Fingerprint of the whole URL (credentials and fragment excluded, query included). Two endpoints are the
+   * same destination exactly when this is equal; it reveals nothing and is never printed.
+   */
+  readonly identity: string;
   /** localhost, a private address or a well-known development tunnel. */
   readonly development: boolean;
 }
+
+const FNV_PRIME = 0x100000001b3n;
+const FNV_OFFSET = 0xcbf29ce484222325n;
+
+/** FNV-1a, 64 bit, over UTF-16 code units: a stable fingerprint, not a security primitive. */
+function fingerprint(text: string): string {
+  let hash = FNV_OFFSET;
+  for (let i = 0; i < text.length; i++) hash = ((hash ^ BigInt(text.charCodeAt(i))) * FNV_PRIME) & 0xffffffffffffffffn;
+  return hash.toString(16).padStart(16, "0");
+}
+
+/** A path segment is shown only when it is a short lowercase word (`hooks`, `stripe-webhook`). */
+const PLAIN_SEGMENT = /^[a-z]+(?:-[a-z]+)*$/;
 
 /**
  * Parses a webhook URL for display. Webhook URLs often carry a secret in the path or in the query
@@ -72,9 +101,9 @@ export function safeUrl(raw: unknown): SafeUrl | null {
   const host = url.host.toLowerCase();
   const path = url.pathname
     .split("/")
-    .map((segment) => (segment.length >= 20 ? "…" : segment))
+    .map((segment) => (segment.length === 0 || (segment.length <= 20 && PLAIN_SEGMENT.test(segment)) ? segment : "…"))
     .join("/");
   const hostname = url.hostname.toLowerCase();
   const development = hostname === "localhost" || isPrivateOrLoopbackIp(hostname) || DEV_SUFFIXES.some((s) => hostname.endsWith(s));
-  return { scheme, host, display: clip(`${scheme}://${host}${path === "/" ? "" : path}`, 80), development };
+  return { scheme, host, display: clip(`${scheme}://${host}${path === "/" ? "" : path}`, 80), identity: fingerprint(`${scheme}://${host}${url.pathname}${url.search}`), development };
 }
