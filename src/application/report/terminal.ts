@@ -43,9 +43,16 @@ export function renderTerminal(report: AuditReport): string {
   if (report.findings.length === 0) out.push("No findings.", "");
   for (const f of report.findings) out.push(findingBlock(f), "");
 
-  if (report.skipped.length > 0) {
+  const unreadable = report.skipped.filter((s) => s.reason !== "disabled");
+  const switchedOff = report.skipped.filter((s) => s.reason === "disabled");
+  if (unreadable.length > 0) {
     out.push("Skipped checks (could not read what they need):");
-    for (const s of report.skipped) out.push(wrap(`- ${visibleText(s.checkId, 60)}: ${visibleText(s.resource, 80)}: ${visibleText(s.detail, 240)}`, WIDTH, 2).replace(/\n(\s+)/g, "\n$1  "));
+    for (const s of unreadable) out.push(wrap(`- ${visibleText(s.checkId, 60)}: ${visibleText(s.resource, 80)}: ${visibleText(s.detail, 240)}`, WIDTH, 2).replace(/\n(\s+)/g, "\n$1  "));
+    out.push("");
+  }
+  if (switchedOff.length > 0) {
+    out.push("Checks not run (switched off by the options):");
+    for (const s of switchedOff) out.push(wrap(`- ${visibleText(s.checkId, 60)}: ${visibleText(s.detail, 240)}`, WIDTH, 2).replace(/\n(\s+)/g, "\n$1  "));
     out.push("");
   }
   if (report.truncated.length > 0) out.push(`Listed only up to the page cap, so counts are lower bounds: ${report.truncated.map((t) => visibleText(t, 80)).join(", ")}.`, "");

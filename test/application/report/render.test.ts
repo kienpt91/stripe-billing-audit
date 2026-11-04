@@ -6,6 +6,7 @@ import { MANUAL_ITEMS } from "../../../src/domain/manual.js";
 import { REPORT_SCHEMA_VERSION, type AuditReport } from "../../../src/domain/report.js";
 import { expectGolden } from "../../support/golden.js";
 import { hostileString, prng } from "../../support/prng.js";
+import { facts, unreadable } from "../../support/builders.js";
 import { cleanReport, reportFor, troubledFacts } from "../../support/scenarios.js";
 
 const CONTROL = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u202a-\u202e\u200b-\u200f\u2028\u2029\u2060-\u206f\ufeff]/;
@@ -65,6 +66,17 @@ describe("a report built from hostile text", () => {
       expect(outside).not.toMatch(/<[a-zA-Z/!]/);
       expect(outside).not.toMatch(/\]\(/);
     }
+  });
+});
+
+describe("checks the options switched off", () => {
+  const off = reportFor(facts({ failedEvents: unreadable("disabled", "events", "not requested; pass --include-events") }));
+
+  it("are listed apart from checks the key could not run", () => {
+    expect(renderTerminal(off)).toContain("Checks not run (switched off by the options):\n  - webhook-deliveries-failing: not requested; pass --include-events");
+    expect(renderTerminal(off)).not.toContain("Skipped checks");
+    expect(renderMarkdown(off)).toContain("## Checks not run");
+    expect(renderMarkdown(off)).not.toContain("## Checks that could not run");
   });
 });
 

@@ -37,10 +37,18 @@ export function renderMarkdown(report: AuditReport): string {
     }
   }
 
-  if (report.skipped.length > 0) {
+  const unreadable = report.skipped.filter((s) => s.reason !== "disabled");
+  const switchedOff = report.skipped.filter((s) => s.reason === "disabled");
+  if (unreadable.length > 0) {
     out.push("## Checks that could not run", "", "These checks need a resource the key could not read. No conclusion is drawn for them.", "");
     out.push("| Check | Resource | Reason |", "| --- | --- | --- |");
-    for (const s of report.skipped) out.push(`| ${markdownCode(s.checkId)} | ${markdownCode(s.resource, 80)} | ${markdownCode(s.detail, 240)} |`);
+    for (const s of unreadable) out.push(`| ${markdownCode(s.checkId)} | ${markdownCode(s.resource, 80)} | ${markdownCode(s.detail, 240)} |`);
+    out.push("");
+  }
+  if (switchedOff.length > 0) {
+    out.push("## Checks not run", "", "These checks were switched off by the options of this run.", "");
+    out.push("| Check | Reason |", "| --- | --- |");
+    for (const s of switchedOff) out.push(`| ${markdownCode(s.checkId)} | ${markdownCode(s.detail, 240)} |`);
     out.push("");
   }
   if (report.truncated.length > 0) out.push(`Listed only up to the page cap, so counts are lower bounds: ${report.truncated.map((t) => markdownCode(t)).join(", ")}.`, "");
