@@ -10,7 +10,7 @@ One `AuditReport` value is built in the domain and rendered three ways in the ap
 - Terminal output makes every control character, escape sequence, bidi override and zero-width character visible (`\x1B`, `\u{202E}`). Markdown output puts every dynamic string inside a code span or a fenced block whose fence is longer than any backtick run inside; static text is ours.
 - Golden files for the terminal, Markdown and JSON output are compared in tests; `UPDATE_GOLDEN=1` rewrites them for a deliberate change.
 - Every finding carries an id, severity, evidence lines, why it matters and a suggested fix. Evidence is built from validated, typed facts only.
-- The report lists every check with its status (`passed`, `failed`, `not_applicable`, `skipped`), so a clean run shows what was and was not looked at.
+- The report lists every check with its status (`passed`, `failed`, `not_applicable`, `skipped`, `inconclusive`), so a clean run shows what was and was not looked at. Resources read only in part are listed under `partial` with their cause (`cap`, `api_error`, `budget`) and what was and was not examined; the terminal and Markdown reports have a section for inconclusive checks and one for partial coverage.
 
 ## Consequences
 

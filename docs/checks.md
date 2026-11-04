@@ -1,6 +1,6 @@
 # Checks
 
-Every check is a pure rule over facts read from the account. A check has an id, a severity, evidence (what was observed), why it matters and a suggested fix. A check whose data could not be read is **skipped** with the reason, never guessed; a check that does not apply (for example "no subscription is set to cancel") says so. The terminal report lists findings; `--json` and `--markdown` also list every check with its status.
+Every check is a pure rule over facts read from the account. A check has an id, a severity, evidence (what was observed), why it matters and a suggested fix. A check whose data could not be read is **skipped** with the reason, never guessed; a check that does not apply (for example "no subscription is set to cancel") says so; a check that found nothing, but only in part of the data (a listing stopped at `--max-pages`, the customer lookup stopped at its cap of 50, or a lookup failed part way), is **inconclusive** with the cause and is never reported as passed. A check that finds something is still a finding, with "at least" counts. The terminal report lists findings and the checks that did not conclude; `--json` and `--markdown` also list every check with its status.
 
 Severity is what the finding reports, and `--fail-on` gates on it:
 
@@ -16,7 +16,7 @@ The thresholds behind some checks are options: `--past-due-days` (7), `--trial-d
 
 ## Permissions
 
-A restricted key needs read access to the resource behind each endpoint the audit calls. The Stripe dashboard names the permissions per resource; a check whose resource the key cannot read is skipped, listed with the HTTP status, and the run ends with exit code 4.
+A restricted key needs read access to the resource behind each endpoint the audit calls. The Stripe dashboard names the permissions per resource; a check whose resource the key cannot read (HTTP 403), or that the account does not have (HTTP 404), is skipped, listed with the HTTP status, and the run ends with exit code 4.
 
 | Endpoint (GET) | Used by |
 | --- | --- |
@@ -31,6 +31,10 @@ A restricted key needs read access to the resource behind each endpoint the audi
 | `/v1/events` (`delivery_success=false`, one page of 25) | `webhook-deliveries-failing`; only with `--include-events` |
 
 The permission names in the dashboard have not been checked against a real account for this project; if a check is skipped with HTTP 403, enable the read permission of that resource and run again.
+
+## Coverage and caps
+
+Listings are read newest first, up to `--max-pages` pages of 100 objects (default 5), and the payment-method checks look up at most 50 customers. When a cap stops a listing or the lookups, every check that needs that resource and found nothing is **inconclusive** (JSON: `checks[].status`, with `partial[]` naming the resource, the cause and what was not examined), and the run exits **5** unless `--allow-partial-coverage` is given. If a lookup fails after some progress (an HTTP error, a timeout, a malformed answer) or the request budget runs out, the cause is `api_error` or `budget`, the checks are inconclusive in the same way, and the run exits **3**; the allowance does not cover that. Raising `--max-pages` (up to 50) is the way to a conclusive run on a large account; the customer lookup cap is fixed at 50.
 
 ## What the API cannot show
 
