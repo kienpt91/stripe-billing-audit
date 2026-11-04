@@ -3,6 +3,7 @@ import { paymentMethodMissingOnActive, trialEndingWithoutPaymentMethod } from ".
 import { subscriptionCancelWithoutWinback, subscriptionDelinquent } from "./subscriptions.js";
 import { dunningRetriesExhausted, invoiceStuckOpen, invoiceUncollectible } from "./invoices.js";
 import { portalMissing, portalNoCancellation, portalNoLegalLinks, portalNoPaymentMethodUpdate } from "./portal.js";
+import { taxAutomaticDisabled, taxBehaviorUnspecified, taxProductCodeMissing, taxSettingsIncomplete } from "./tax.js";
 import {
   webhookApiVersionDrift,
   webhookDeliveriesFailing,
@@ -35,4 +36,8 @@ export const RULES: readonly Rule[] = [
   portalNoPaymentMethodUpdate,
   portalNoCancellation,
   portalNoLegalLinks,
+  taxAutomaticDisabled,
+  taxSettingsIncomplete,
+  taxBehaviorUnspecified,
+  taxProductCodeMissing,
 ];
