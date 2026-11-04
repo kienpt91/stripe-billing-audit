@@ -17,6 +17,7 @@ export interface AuditOptions {
   readonly timeoutMs: number;
   readonly skipCustomerLookup: boolean;
   readonly includeEvents: boolean;
+  readonly allowPartialCoverage: boolean;
 }
 
 export type Command =
@@ -59,6 +60,7 @@ export function parseCommand(argv: readonly string[]): Result<Command> {
         "timeout-ms": { type: "string" },
         "skip-customer-lookup": { type: "boolean" },
         "include-events": { type: "boolean" },
+        "allow-partial-coverage": { type: "boolean" },
       },
     });
   } catch (error) {
@@ -98,6 +100,7 @@ export function parseCommand(argv: readonly string[]): Result<Command> {
       timeoutMs: n(timeoutMs),
       skipCustomerLookup: v["skip-customer-lookup"] === true,
       includeEvents: v["include-events"] === true,
+      allowPartialCoverage: v["allow-partial-coverage"] === true,
     },
   });
 }

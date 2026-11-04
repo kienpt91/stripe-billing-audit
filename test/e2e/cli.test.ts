@@ -135,7 +135,7 @@ describe("a key with too few permissions", () => {
     expect(r.out).toContain("Skipped checks");
     expect(r.out).toContain("tax-automatic-disabled: tax registrations: HTTP 403");
     expect(r.out).toContain("portal-missing: billing portal configurations: HTTP 403");
-    expect(r.out).toContain("exit code 4 (checks skipped for lack of permission)");
+    expect(r.out).toContain("exit code 4 (checks skipped: a resource was not available to this key)");
     expect(r.out).not.toContain(KEY);
   });
 
@@ -195,8 +195,9 @@ describe("API trouble", () => {
     const template = world.subscriptions[0] as Record<string, unknown>;
     world.subscriptions = Array.from({ length: 150 }, (_, i) => ({ ...template, id: `sub_${String(i).padStart(8, "0")}` }));
     const r = await cli(["--max-pages", "1"], { world });
-    expect(r.out).toContain("Listed only up to the page cap");
-    expect(r.out).toContain("subscriptions");
+    expect(r.out).toContain("Partial coverage");
+    expect(r.out).toContain("subscriptions [cap]: stopped at the page cap (1 page of 100)");
+    expect(r.code).toBe(5);
   });
 });
 

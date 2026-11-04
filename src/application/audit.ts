@@ -12,6 +12,7 @@ export interface AuditRequest {
   readonly mode: Mode;
   readonly keyKind: KeyKind;
   readonly failOn: Severity;
+  readonly allowPartialCoverage: boolean;
   readonly thresholds: Thresholds;
   readonly collect: CollectOptions;
   readonly warnings: readonly string[];
@@ -29,9 +30,15 @@ export async function runAudit(api: StripeReader, clock: Clock, request: AuditRe
     facts,
     evaluation,
     keyKind: request.keyKind,
-    options: { failOn: request.failOn, thresholds: request.thresholds, customerLookup: request.collect.customerLookup, includeEvents: request.collect.includeEvents },
+    options: {
+      failOn: request.failOn,
+      thresholds: request.thresholds,
+      customerLookup: request.collect.customerLookup,
+      includeEvents: request.collect.includeEvents,
+      allowPartialCoverage: request.allowPartialCoverage,
+    },
     warnings: request.warnings,
     requestsUsed: requestsUsed(),
-    exitCode: exitCodeFor(evaluation, request.failOn),
+    exitCode: exitCodeFor(evaluation, request.failOn, request.allowPartialCoverage),
   });
 }

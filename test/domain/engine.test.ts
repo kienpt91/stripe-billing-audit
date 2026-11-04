@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { evaluate } from "../../src/domain/engine.js";
-import { EXIT_API, EXIT_CLEAN, EXIT_FINDINGS, EXIT_PERMISSION, exitCodeFor } from "../../src/domain/exit-code.js";
+import { EXIT_API, EXIT_CLEAN, EXIT_FINDINGS, EXIT_PARTIAL, EXIT_PERMISSION, exitCodeFor } from "../../src/domain/exit-code.js";
 import { buildReport, REPORT_SCHEMA_VERSION } from "../../src/domain/report.js";
 import { defineRule, failed, notApplicable, passed } from "../../src/domain/rule.js";
 import { RULES } from "../../src/domain/rules/index.js";
@@ -33,10 +33,46 @@ describe("evaluate", () => {
     expect(result.skipped).toEqual([{ checkId: "needs-subs", reason: "permission", resource: "subscriptions", detail: "HTTP 403" }]);
   });
 
-  it("collects truncation and malformed counts from readable facts only", () => {
-    const result = evaluate(facts({ subscriptions: ok([], { truncated: true, malformed: 2 }), prices: ok([], { malformed: 1 }), products: unreadable("api_error") }), THRESHOLDS, []);
-    expect(result.truncated).toEqual(["subscriptions"]);
+  it("collects partial coverage and malformed counts from readable facts only", () => {
+    const cap = { cause: "cap", detail: "page cap" } as const;
+    const result = evaluate(facts({ subscriptions: ok([], { partial: cap, malformed: 2 }), prices: ok([], { malformed: 1 }), products: unreadable("api_error") }), THRESHOLDS, []);
+    expect(result.partial).toEqual([{ resource: "subscriptions", cause: "cap", detail: "page cap" }]);
     expect(result.malformed).toBe(3);
+  });
+
+  describe("partial data", () => {
+    const cap = { cause: "cap", detail: "page cap" } as const;
+    const partialSubs = facts({ subscriptions: ok([], { partial: cap }) });
+
+    it("turns a pass into inconclusive, with the cause, and never into passed", () => {
+      const result = evaluate(partialSubs, THRESHOLDS, [needsSubs, passedRule()]);
+      expect(result.checks.map((c) => [c.id, c.status])).toEqual([
+        ["needs-subs", "inconclusive"],
+        ["p", "passed"],
+      ]);
+      expect(result.checks[0]?.detail).toBe("subscriptions: page cap");
+    });
+
+    it("also turns not applicable, unless the reason does not depend on the data", () => {
+      const dataBound = defineRule({ ...base, id: "na-data", summary: "s", requires: ["subscriptions"], evaluate: () => notApplicable("no subscription is set to cancel") });
+      const modeBound = defineRule({ ...base, id: "na-mode", summary: "s", requires: ["subscriptions"], evaluate: () => notApplicable("test-mode run", true) });
+      const result = evaluate(partialSubs, THRESHOLDS, [dataBound, modeBound]);
+      expect(result.checks.map((c) => [c.id, c.status])).toEqual([
+        ["na-data", "inconclusive"],
+        ["na-mode", "not_applicable"],
+      ]);
+    });
+
+    it("keeps a finding a finding", () => {
+      const finder = defineRule({ ...base, id: "f", summary: "s", requires: ["subscriptions"], evaluate: () => failed("high", "t", ["e"]) });
+      const result = evaluate(partialSubs, THRESHOLDS, [finder]);
+      expect(result.checks[0]?.status).toBe("failed");
+      expect(result.findings).toHaveLength(1);
+    });
+
+    it("does not touch checks that do not need the partial fact", () => {
+      expect(evaluate(partialSubs, THRESHOLDS, [bad("x", "low"), na]).checks.map((c) => c.status)).toEqual(["failed", "not_applicable"]);
+    });
   });
 });
 
@@ -58,9 +94,36 @@ describe("exitCodeFor", () => {
     expect(exitCodeFor(withSkips("budget"), "high")).toBe(EXIT_API);
   });
 
-  it("does not count checks the user switched off or that the account cannot have", () => {
+  it("counts a resource the account does not have like one the key cannot read, but not a check the user switched off", () => {
     expect(exitCodeFor(withSkips("disabled"), "high")).toBe(EXIT_FINDINGS);
-    expect(exitCodeFor(withSkips("not_available"), "high")).toBe(EXIT_FINDINGS);
+    expect(exitCodeFor(withSkips("not_available"), "high")).toBe(EXIT_PERMISSION);
+  });
+
+  describe("partial coverage", () => {
+    const cap = { cause: "cap", detail: "page cap" } as const;
+    const inconclusive = (partial: typeof cap | { cause: "api_error" | "budget"; detail: string }, rules = [needsSubs, bad("x", "high")]) => evaluate(facts({ subscriptions: ok([], { partial }) }), THRESHOLDS, rules);
+
+    it("is exit 5 when a cap left a check inconclusive, even with findings elsewhere, unless it is allowed", () => {
+      expect(exitCodeFor(inconclusive(cap), "high")).toBe(EXIT_PARTIAL);
+      expect(exitCodeFor(inconclusive(cap), "high", true)).toBe(EXIT_FINDINGS);
+      expect(exitCodeFor(inconclusive(cap, [needsSubs]), "high", true)).toBe(EXIT_CLEAN);
+    });
+
+    it("is not exit 5 when no check depended on the slice", () => {
+      expect(exitCodeFor(inconclusive(cap, [bad("x", "low")]), "high")).toBe(EXIT_CLEAN);
+    });
+
+    it("is exit 3 when a failure part way caused it, with or without the allowance and even without an inconclusive check", () => {
+      for (const cause of ["api_error", "budget"] as const) {
+        expect(exitCodeFor(inconclusive({ cause, detail: "x" }), "high"), cause).toBe(EXIT_API);
+        expect(exitCodeFor(inconclusive({ cause, detail: "x" }, [bad("x", "low")]), "high", true), cause).toBe(EXIT_API);
+      }
+    });
+
+    it("ranks 3 over 4 over 5 over 1", () => {
+      const both = evaluate(facts({ subscriptions: ok([], { partial: cap }), prices: unreadable("permission") }), THRESHOLDS, [needsSubs, defineRule({ ...base, id: "needs-prices", summary: "s", requires: ["prices"], evaluate: () => passed }), bad("x", "critical")]);
+      expect(exitCodeFor(both, "high")).toBe(EXIT_PERMISSION);
+    });
   });
 });
 
@@ -75,7 +138,7 @@ describe("buildReport", () => {
     facts: facts({ account: ok(account({ id: "acct_1AbCdEfGhIjKlMnOp" })) }),
     evaluation,
     keyKind: "restricted",
-    options: { failOn: "high", thresholds: THRESHOLDS, customerLookup: true, includeEvents: false },
+    options: { failOn: "high", thresholds: THRESHOLDS, customerLookup: true, includeEvents: false, allowPartialCoverage: false },
     warnings: ["w"],
     requestsUsed: 12,
     exitCode: 4,
@@ -91,7 +154,7 @@ describe("buildReport", () => {
   it("summarises findings and checks", () => {
     expect(report.summary.findings).toBe(1);
     expect(report.summary.bySeverity).toEqual({ critical: 0, high: 1, medium: 0, low: 0, info: 0 });
-    expect(report.summary.checks).toEqual({ passed: 0, failed: 1, not_applicable: 0, skipped: 1 });
+    expect(report.summary.checks).toEqual({ passed: 0, failed: 1, not_applicable: 0, skipped: 1, inconclusive: 0 });
     expect(report.notReadable.map((n) => n.id)).toEqual(MANUAL_ITEMS.filter((m) => m.inEveryReport).map((m) => m.id));
   });
 
@@ -101,7 +164,7 @@ describe("buildReport", () => {
       facts: facts({ account: unreadable("api_error") }),
       evaluation,
       keyKind: "secret",
-      options: { failOn: "low", thresholds: THRESHOLDS, customerLookup: false, includeEvents: true },
+      options: { failOn: "low", thresholds: THRESHOLDS, customerLookup: false, includeEvents: true, allowPartialCoverage: true },
       warnings: [],
       requestsUsed: 0,
       exitCode: 3,

@@ -17,8 +17,8 @@ export interface RuleContext {
   readonly mode: Mode;
   readonly nowSeconds: number;
   readonly thresholds: Thresholds;
-  /** Facts whose listing stopped at a cap: counts are lower bounds. */
-  readonly truncated: ReadonlySet<FactKey>;
+  /** Facts that cover only part of what exists: counts are lower bounds. */
+  readonly partial: ReadonlySet<FactKey>;
 }
 
 export interface Finding {
@@ -34,7 +34,7 @@ export interface Finding {
 
 export type Outcome =
   | { readonly status: "passed" }
-  | { readonly status: "not_applicable"; readonly reason: string }
+  | { readonly status: "not_applicable"; readonly reason: string; /** True when the reason holds whatever the data says (for example the mode of the key). */ readonly independentOfData: boolean }
   | { readonly status: "failed"; readonly severity: Severity; readonly title: string; readonly evidence: readonly string[] };
 
 /** Facts a rule asked for are present; the others may be missing. */
@@ -71,8 +71,8 @@ export function defineRule<K extends FactKey>(spec: RuleSpec<K>): Rule {
 
 export const passed: Outcome = { status: "passed" };
 
-export function notApplicable(reason: string): Outcome {
-  return { status: "not_applicable", reason };
+export function notApplicable(reason: string, independentOfData = false): Outcome {
+  return { status: "not_applicable", reason, independentOfData };
 }
 
 export function failed(severity: Severity, title: string, evidence: readonly string[]): Outcome {

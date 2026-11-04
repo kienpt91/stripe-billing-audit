@@ -23,7 +23,7 @@ export function renderMarkdown(report: AuditReport): string {
   out.push("## Summary", "", "| Severity | Findings |", "| --- | ---: |");
   for (const s of SEVERITIES) out.push(`| ${title(s)} | ${report.summary.bySeverity[s]} |`);
   const c = report.summary.checks;
-  out.push("", `${c.passed + c.failed + c.not_applicable + c.skipped} checks ran: ${c.passed} passed, ${c.failed} failed, ${c.not_applicable} not applicable, ${c.skipped} skipped.`, "");
+  out.push("", `${c.passed + c.failed + c.not_applicable + c.skipped + c.inconclusive} checks ran: ${c.passed} passed, ${c.failed} failed, ${c.not_applicable} not applicable, ${c.skipped} skipped, ${c.inconclusive} inconclusive.`, "");
 
   out.push("## Findings", "");
   if (report.findings.length === 0) out.push("No findings.", "");
@@ -51,7 +51,19 @@ export function renderMarkdown(report: AuditReport): string {
     for (const s of switchedOff) out.push(`| ${markdownCode(s.checkId)} | ${markdownCode(s.detail, 240)} |`);
     out.push("");
   }
-  if (report.truncated.length > 0) out.push(`Listed only up to the page cap, so counts are lower bounds: ${report.truncated.map((t) => markdownCode(t)).join(", ")}.`, "");
+  const inconclusive = report.checks.filter((c) => c.status === "inconclusive");
+  if (inconclusive.length > 0) {
+    out.push("## Inconclusive checks", "", "These checks found nothing, but only in the part of the data that was examined. No conclusion is drawn for the rest.", "");
+    out.push("| Check | Why |", "| --- | --- |");
+    for (const c of inconclusive) out.push(`| ${markdownCode(c.id)} | ${markdownCode(c.detail ?? "", 300)} |`);
+    out.push("");
+  }
+  if (report.partial.length > 0) {
+    out.push("## Partial coverage", "", "These resources were read only in part, so counts for them are lower bounds.", "");
+    out.push("| Resource | Cause | What happened |", "| --- | --- | --- |");
+    for (const p of report.partial) out.push(`| ${markdownCode(p.resource, 80)} | ${markdownCode(p.cause, 20)} | ${markdownCode(p.detail, 300)} |`);
+    out.push("");
+  }
   if (report.ignoredObjects > 0) out.push(`${report.ignoredObjects} object(s) with an unexpected shape were ignored.`, "");
 
   out.push("## Not visible through the Stripe API", "", "These matter for reliable billing but Stripe does not expose them, so they were not guessed. Check them by hand:", "");

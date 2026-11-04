@@ -6,6 +6,8 @@ import { visibleText, wrap } from "../../domain/text/text.js";
 
 const WIDTH = 100;
 
+const CAUSE: Readonly<Record<string, string>> = { cap: "cap", api_error: "error", budget: "request budget" };
+
 const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`;
 
 function findingBlock(f: Finding): string {
@@ -24,7 +26,9 @@ function exitMeaning(report: AuditReport): string {
     case 3:
       return "API errors left the audit incomplete";
     case 4:
-      return "checks skipped for lack of permission";
+      return "checks skipped: a resource was not available to this key";
+    case 5:
+      return "partial coverage: a cap left checks inconclusive";
     default:
       return "see the documentation";
   }
@@ -55,7 +59,17 @@ export function renderTerminal(report: AuditReport): string {
     for (const s of switchedOff) out.push(wrap(`- ${visibleText(s.checkId, 60)}: ${visibleText(s.detail, 240)}`, WIDTH, 2).replace(/\n(\s+)/g, "\n$1  "));
     out.push("");
   }
-  if (report.truncated.length > 0) out.push(`Listed only up to the page cap, so counts are lower bounds: ${report.truncated.map((t) => visibleText(t, 80)).join(", ")}.`, "");
+  const inconclusive = report.checks.filter((c) => c.status === "inconclusive");
+  if (inconclusive.length > 0) {
+    out.push("Inconclusive checks (they found nothing, but only in the part of the data that was examined):");
+    for (const c of inconclusive) out.push(wrap(`- ${visibleText(c.id, 60)}: ${visibleText(c.detail ?? "", 300)}`, WIDTH, 2).replace(/\n(\s+)/g, "\n$1  "));
+    out.push("");
+  }
+  if (report.partial.length > 0) {
+    out.push("Partial coverage (what was not examined, so counts above are lower bounds):");
+    for (const p of report.partial) out.push(wrap(`- ${visibleText(p.resource, 80)} [${CAUSE[p.cause] ?? visibleText(p.cause, 20)}]: ${visibleText(p.detail, 300)}`, WIDTH, 2).replace(/\n(\s+)/g, "\n$1  "));
+    out.push("");
+  }
   if (report.ignoredObjects > 0) out.push(`${plural(report.ignoredObjects, "object")} with an unexpected shape were ignored.`, "");
 
   out.push("Not readable through the Stripe API (see --checklist for what to check by hand):");
@@ -65,7 +79,7 @@ export function renderTerminal(report: AuditReport): string {
   const by = SEVERITIES.filter((s) => report.summary.bySeverity[s] > 0).map((s) => `${report.summary.bySeverity[s]} ${s}`);
   const c = report.summary.checks;
   out.push(
-    `Summary: ${plural(report.summary.findings, "finding")}${by.length > 0 ? ` (${by.join(", ")})` : ""}; checks: ${c.passed} passed, ${c.failed} failed, ${c.not_applicable} not applicable, ${c.skipped} skipped; exit code ${report.exitCode} (${exitMeaning(report)})`,
+    `Summary: ${plural(report.summary.findings, "finding")}${by.length > 0 ? ` (${by.join(", ")})` : ""}; checks: ${c.passed} passed, ${c.failed} failed, ${c.not_applicable} not applicable, ${c.skipped} skipped, ${c.inconclusive} inconclusive; exit code ${report.exitCode} (${exitMeaning(report)})`,
   );
   return `${out.join("\n")}\n`;
 }

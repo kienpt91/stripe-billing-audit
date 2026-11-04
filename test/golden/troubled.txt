@@ -218,4 +218,4 @@ Not readable through the Stripe API (see --checklist for what to check by hand):
 - Retry schedule and the state after the last retry
 - Failed-payment and renewal emails
 
-Summary: 16 findings (7 high, 6 medium, 3 low); checks: 5 passed, 16 failed, 3 not applicable, 1 skipped; exit code 4 (checks skipped for lack of permission)
+Summary: 16 findings (7 high, 6 medium, 3 low); checks: 5 passed, 16 failed, 3 not applicable, 1 skipped, 0 inconclusive; exit code 4 (checks skipped: a resource was not available to this key)

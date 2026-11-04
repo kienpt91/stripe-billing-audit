@@ -91,48 +91,55 @@ async function listAll<T extends { readonly id: string }>(
     if (decoded === null) return unreadable(key, "api_error", `unexpected response shape${page > 1 ? ` (page ${page})` : ""}`);
     malformed += decoded.malformed;
     for (const item of decoded.items) items.set(item.id, item);
-    if (!decoded.hasMore) return { status: "ok", value: [...items.values()], truncated: false, malformed };
+    if (!decoded.hasMore) return { status: "ok", value: [...items.values()], partial: null, malformed };
     if (decoded.lastId === null || decoded.lastId === cursor) return unreadable(key, "api_error", "pagination did not advance");
     cursor = decoded.lastId;
   }
-  return { status: "ok", value: [...items.values()], truncated: true, malformed };
+  const detail = `stopped at the page cap (${maxPages} ${maxPages === 1 ? "page" : "pages"} of ${PAGE_SIZE}); older objects were not examined`;
+  return { status: "ok", value: [...items.values()], partial: { cause: "cap", detail }, malformed };
 }
 
 async function readAccount(api: StripeReader): Promise<Fact<AccountFacts>> {
   const result = await api.get("/v1/account");
   if (!result.ok) return failure("account", result, 1);
-  return { status: "ok", value: decodeAccount(result.body, result.stripeVersion), truncated: false, malformed: 0 };
+  return { status: "ok", value: decodeAccount(result.body, result.stripeVersion), partial: null, malformed: 0 };
 }
 
 async function readTaxSettings(api: StripeReader): Promise<Fact<TaxSettings | null>> {
   const result = await api.get("/v1/tax/settings");
   if (!result.ok) {
     // No settings object at all means tax has not been set up on the account.
-    if (result.kind === "not_found") return { status: "ok", value: null, truncated: false, malformed: 0 };
+    if (result.kind === "not_found") return { status: "ok", value: null, partial: null, malformed: 0 };
     return failure("taxSettings", result, 1);
   }
   const value = decodeTaxSettings(result.body);
-  return value === null ? unreadable("taxSettings", "api_error", "unexpected response shape") : { status: "ok", value, truncated: false, malformed: 0 };
+  return value === null ? unreadable("taxSettings", "api_error", "unexpected response shape") : { status: "ok", value, partial: null, malformed: 0 };
 }
 
 async function readCustomers(api: StripeReader, ids: readonly string[], cap: number): Promise<Fact<CustomerLookup>> {
+  const looked = ids.slice(0, Math.max(0, cap));
   const checked: CustomerPaymentState[] = [];
   let malformed = 0;
-  let stopped = false;
-  for (const id of ids.slice(0, Math.max(0, cap))) {
+  let done = 0;
+  for (const id of looked) {
     const result = await api.get(`/v1/customers/${id}`);
-    if (!result.ok) {
-      if (result.kind === "not_found") continue;
+    if (!result.ok && result.kind !== "not_found") {
       const fact = failure("customers", result, 1);
-      if (checked.length === 0 || (fact.status === "unreadable" && fact.reason === "permission")) return fact;
-      stopped = true;
-      break;
+      // Nothing learned yet, or the key cannot read customers at all: there is no slice to report.
+      if (done === 0 || (fact.status === "unreadable" && fact.reason === "permission")) return fact;
+      // Some customers were checked before the failure: say so, with the real cause (not the cap).
+      const cause = fact.status === "unreadable" && fact.reason === "budget" ? "budget" : "api_error";
+      const why = fact.status === "unreadable" ? fact.detail : "the lookup failed";
+      return { status: "ok", value: { checked, wanted: ids.length }, partial: { cause, detail: `stopped after ${done} of ${ids.length} customers: ${why}` }, malformed };
     }
+    done += 1;
+    if (!result.ok) continue; // 404: the customer no longer exists
     const customer = decodeCustomer(result.body);
     if (customer === null) malformed += 1;
     else checked.push(customer);
   }
-  return { status: "ok", value: { checked, wanted: ids.length }, truncated: stopped || ids.length > cap, malformed };
+  const partial = ids.length > looked.length ? { cause: "cap" as const, detail: `looked up ${looked.length} of ${ids.length} customers (cap of ${cap}); the rest were not examined` } : null;
+  return { status: "ok", value: { checked, wanted: ids.length }, partial, malformed };
 }
 
 /**
@@ -184,5 +191,6 @@ async function readEvents(api: StripeReader): Promise<Facts["failedEvents"]> {
   if (!result.ok) return failure("failedEvents", result, 1);
   const page = decodePage(result.body, decodeEvent);
   if (page === null) return unreadable("failedEvents", "api_error", "unexpected response shape");
-  return { status: "ok", value: page.items, truncated: page.hasMore, malformed: page.malformed };
+  const partial = page.hasMore ? { cause: "cap" as const, detail: "only the newest 25 events with failed deliveries were read; older ones were not examined" } : null;
+  return { status: "ok", value: page.items, partial, malformed: page.malformed };
 }

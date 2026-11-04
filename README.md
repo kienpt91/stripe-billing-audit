@@ -35,8 +35,8 @@ The output below is real. It comes from `npm run demo`, which starts the real co
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:40:40Z, 10 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:34483; this is a test setup, not Stripe.
+Checked 2026-11-04T14:54:25Z, 10 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:44627; this is a test setup, not Stripe.
 
 No findings.
 
@@ -48,7 +48,7 @@ Not readable through the Stripe API (see --checklist for what to check by hand):
 - Retry schedule and the state after the last retry
 - Failed-payment and renewal emails
 
-Summary: 0 findings; checks: 22 passed, 0 failed, 2 not applicable, 1 skipped; exit code 0 (nothing at or above the fail-on severity)
+Summary: 0 findings; checks: 22 passed, 0 failed, 2 not applicable, 1 skipped, 0 inconclusive; exit code 0 (nothing at or above the fail-on severity)
 [exit code 0]  (10 requests, all GET)
 ```
 
@@ -60,8 +60,8 @@ This is the beginning and the end of a report with 17 findings; the full transcr
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:40:40Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:39341; this is a test setup, not Stripe.
+Checked 2026-11-04T14:54:25Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:45825; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -150,7 +150,7 @@ Not readable through the Stripe API (see --checklist for what to check by hand):
 - Retry schedule and the state after the last retry
 - Failed-payment and renewal emails
 
-Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped; exit code 1 (findings at or above medium)
+Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped, 0 inconclusive; exit code 1 (findings at or above medium)
 [exit code 1]  (12 requests, all GET)
 ```
 
@@ -162,8 +162,8 @@ The key may not read tax data or the Billing portal. The checks that need them a
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:40:41Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:36297; this is a test setup, not Stripe.
+Checked 2026-11-04T14:54:26Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:35607; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -194,8 +194,69 @@ Not readable through the Stripe API (see --checklist for what to check by hand):
 - Retry schedule and the state after the last retry
 - Failed-payment and renewal emails
 
-Summary: 13 findings (5 high, 5 medium, 3 low); checks: 4 passed, 13 failed, 0 not applicable, 8 skipped; exit code 4 (checks skipped for lack of permission)
+Summary: 13 findings (5 high, 5 medium, 3 low); checks: 4 passed, 13 failed, 0 not applicable, 8 skipped, 0 inconclusive; exit code 4 (checks skipped: a resource was not available to this key)
 [exit code 4]  (12 requests, all GET)
+```
+
+### Partial coverage: exit code 5, and exit code 3
+
+A listing longer than the page cap leaves the checks that found nothing in it inconclusive, and the run exits 5 (`--allow-partial-coverage` accepts that and the run exits 0, with the same report). An API failure in the middle of the customer lookups is reported as such and exits 3, whatever the options:
+
+```text
+[... 13 lines left out of this transcript ...]
+  - subscription-delinquent: subscriptions: stopped at the page cap (1 page of 100); older objects
+    were not examined
+  - subscription-cancel-at-period-end-no-winback: subscriptions: stopped at the page cap (1 page of
+    100); older objects were not examined
+  - customer-no-default-payment-method: subscriptions: stopped at the page cap (1 page of 100);
+    older objects were not examined
+  - trial-ending-without-payment-method: subscriptions: stopped at the page cap (1 page of 100);
+    older objects were not examined
+  - tax-automatic-disabled: subscriptions: stopped at the page cap (1 page of 100); older objects
+    were not examined
+  - tax-settings-incomplete: subscriptions: stopped at the page cap (1 page of 100); older objects
+    were not examined
+  - currency-mixed: subscriptions: stopped at the page cap (1 page of 100); older objects were not
+    examined
+
+Partial coverage (what was not examined, so counts above are lower bounds):
+  - subscriptions [cap]: stopped at the page cap (1 page of 100); older objects were not examined
+
+Not readable through the Stripe API (see --checklist for what to check by hand):
+- Retry schedule and the state after the last retry
+- Failed-payment and renewal emails
+
+Summary: 0 findings; checks: 17 passed, 0 failed, 0 not applicable, 1 skipped, 7 inconclusive; exit code 5 (partial coverage: a cap left checks inconclusive)
+[exit code 5]  (10 requests, all GET)
+
+[... 34 lines left out of this transcript ...]
+
+Summary: 0 findings; checks: 17 passed, 0 failed, 0 not applicable, 1 skipped, 7 inconclusive; exit code 0 (nothing at or above the fail-on severity)
+[exit code 0]  (10 requests, all GET)
+
+[... 5 lines left out of this transcript ...]
+
+No findings.
+
+Checks not run (switched off by the options):
+  - webhook-deliveries-failing: not requested; events can embed personal data, pass --include-events
+    to read them
+
+Inconclusive checks (they found nothing, but only in the part of the data that was examined):
+  - customer-no-default-payment-method: customer payment state: stopped after 2 of 5 customers: HTTP
+    503: Stripe server error
+  - trial-ending-without-payment-method: customer payment state: stopped after 2 of 5 customers:
+    HTTP 503: Stripe server error
+
+Partial coverage (what was not examined, so counts above are lower bounds):
+  - customer payment state [error]: stopped after 2 of 5 customers: HTTP 503: Stripe server error
+
+Not readable through the Stripe API (see --checklist for what to check by hand):
+- Retry schedule and the state after the last retry
+- Failed-payment and renewal emails
+
+Summary: 0 findings; checks: 21 passed, 0 failed, 1 not applicable, 1 skipped, 2 inconclusive; exit code 3 (API errors left the audit incomplete)
+[exit code 3]  (16 requests, all GET)
 ```
 
 ### Gating and refusing
@@ -205,7 +266,7 @@ Summary: 13 findings (5 high, 5 medium, 3 low); checks: 4 passed, 13 failed, 0 n
 ```text
 [... 231 lines left out of this transcript ...]
 
-Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped; exit code 0 (nothing at or above the fail-on severity)
+Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped, 0 inconclusive; exit code 0 (nothing at or above the fail-on severity)
 [exit code 0]  (12 requests, all GET)
 ```
 
@@ -229,7 +290,8 @@ Run with --help for usage.
 | `--past-due-days <n>` | subscriptions failing at least this long are reported (default 7) |
 | `--trial-days <n>` | trials ending within this many days need a payment method (default 7) |
 | `--stale-invoice-days <n>` | invoices open at least this long are reported (default 14) |
-| `--max-pages <n>` | pages of 100 objects per listing (default 5); a cut listing is flagged and counts become lower bounds |
+| `--max-pages <n>` | pages of 100 objects per listing (default 5); a cut listing is reported as partial coverage, counts become lower bounds, and checks that found nothing in it are inconclusive |
+| `--allow-partial-coverage` | do not exit 5 when a cap left checks inconclusive (see below); the report still shows them |
 | `--max-requests <n>` | request budget for the whole run, retries included (default 150) |
 | `--timeout-ms <n>` | per-request timeout (default 15000) |
 | `--skip-customer-lookup` | do not retrieve customers; the two payment-method checks are skipped |
@@ -240,13 +302,23 @@ Run with --help for usage.
 
 | Exit code | Meaning |
 | --- | --- |
-| 0 | no finding at or above `--fail-on`, and nothing was skipped because of the key or the API |
+| 0 | no finding at or above `--fail-on`, and every check ran on all the data it needed |
 | 1 | findings at or above `--fail-on` |
-| 2 | usage error: bad option, missing, publishable, malformed or unrestricted key, refused API base |
-| 3 | API or authentication error (HTTP 401, server errors that persisted, timeouts, request budget spent): the audit is incomplete |
-| 4 | the key lacked permissions: some checks could not run and are listed; no verdict is drawn for them |
+| 2 | usage error: bad option, missing, publishable, malformed or unrestricted key, refused API base, unsafe environment (`NODE_USE_ENV_PROXY`, `NODE_TLS_REJECT_UNAUTHORIZED=0`) |
+| 3 | API or authentication error: HTTP 401, server errors or timeouts that persisted, the request budget was spent, or a lookup failed part way (some customers were checked, then an error): the audit is incomplete |
+| 4 | a resource was not available to the key (HTTP 403, no permission) or to the account (HTTP 404): the checks that need it did not run and are listed |
+| 5 | a cap (`--max-pages`, the 50-customer lookup) left checks **inconclusive**: they found nothing, but only in the part of the data that was examined. Raise the cap, or accept this case with `--allow-partial-coverage` |
 
-Codes 3 and 4 outrank 1 on purpose: a verdict on part of the account must not look like a verdict on all of it. The report still lists every finding. Checks you switched off yourself (`--skip-customer-lookup`, events not requested) do not change the code.
+Codes 3, 4 and 5 outrank 1 in that order, on purpose: a verdict on part of the account must not look like a verdict on all of it. The report still lists every finding. Checks you switched off yourself (`--skip-customer-lookup`, events not requested) do not change the code.
+
+### Incomplete coverage
+
+A check that finds nothing in a slice of the data cannot say the rest is fine, so it is never reported as `passed`. It is reported as **inconclusive**, with the cause, in the terminal report, in the Markdown report and in the JSON (`checks[].status`, `partial`):
+
+- **cap**: a listing stopped at `--max-pages` (the newest objects are read first, older ones were not examined) or the customer lookup stopped at its cap of 50. Exit 5 unless `--allow-partial-coverage`.
+- **error**: a lookup failed after some customers were checked (`stopped after 12 of 40 customers: HTTP 503`), or the request budget ran out between two lookups. Exit 3, always: `--allow-partial-coverage` does not cover failures.
+
+A check that *does* find something in the slice is still a finding, with "at least" counts.
 
 ## What it checks
 

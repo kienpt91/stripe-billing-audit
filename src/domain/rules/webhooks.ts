@@ -154,7 +154,7 @@ export const webhookDevelopmentUrl = defineRule({
   why: "A live endpoint that points to localhost, a private address or a development tunnel is either dead, so live events are lost, or served by someone's laptop, so live billing data leaves production.",
   fix: "Point live endpoints to a production HTTPS URL and delete the development endpoint. Use test mode and the Stripe CLI for local development.",
   evaluate({ webhookEndpoints }, ctx) {
-    if (ctx.mode !== "live") return notApplicable("test-mode run");
+    if (ctx.mode !== "live") return notApplicable("test-mode run", true);
     const dev = webhookEndpoints.filter((e) => enabled(e) && e.url?.development === true);
     if (dev.length === 0) return passed;
     return failed("high", `${plural(dev.length, "live endpoint")} point to a development host`, dev.map((e) => `${label(e)} looks like a development address.`));
@@ -175,7 +175,7 @@ export const webhookDeliveriesFailing = defineRule({
     for (const e of failedEvents) byType.set(e.type, (byType.get(e.type) ?? 0) + 1);
     const top = [...byType.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5);
     const oldest = Math.min(...failedEvents.map((e) => e.created ?? ctx.nowSeconds));
-    const lower = atLeast(ctx.truncated.has("failedEvents"));
+    const lower = atLeast(ctx.partial.has("failedEvents"));
     return failed("high", `${lower}${plural(failedEvents.length, "recent event")} with failed webhook deliveries`, [
       `Most frequent types: ${top.map(([t, n]) => `${t} (${n})`).join(", ")}.`,
       `Oldest listed failure: ${isoDate(oldest)} (${plural(Math.max(0, daysBetween(oldest, ctx.nowSeconds)), "day")} ago).`,

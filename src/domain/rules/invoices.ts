@@ -18,7 +18,7 @@ export const invoiceStuckOpen = defineRule({
       return reference !== null && daysBetween(reference, ctx.nowSeconds) >= limit;
     });
     if (stale.length === 0) return passed;
-    const lower = atLeast(ctx.truncated.has("openInvoices"));
+    const lower = atLeast(ctx.partial.has("openInvoices"));
     const oldest = Math.min(...stale.map((i) => i.dueDate ?? i.created ?? ctx.nowSeconds));
     return failed("medium", `${lower}${plural(stale.length, "invoice")} open for ${limit}+ days`, [
       `${lower}${plural(stale.length, "invoice")}, total due ${totalsByCurrency(stale.map((i) => ({ amount: i.amountDue, currency: i.currency })))}: ${sampleIds(stale.map((i) => i.id))}.`,
@@ -37,7 +37,7 @@ export const invoiceUncollectible = defineRule({
   fix: "Review why these invoices could not be collected, whether the customers still have access, and whether the retry and cancellation settings need to change. Mark an invoice paid if it was settled out of band.",
   evaluate({ uncollectibleInvoices }, ctx) {
     if (uncollectibleInvoices.length === 0) return passed;
-    const lower = atLeast(ctx.truncated.has("uncollectibleInvoices"));
+    const lower = atLeast(ctx.partial.has("uncollectibleInvoices"));
     return failed("low", `${lower}${plural(uncollectibleInvoices.length, "invoice")} marked uncollectible`, [
       `Total ${totalsByCurrency(uncollectibleInvoices.map((i) => ({ amount: i.amountDue, currency: i.currency })))}: ${sampleIds(uncollectibleInvoices.map((i) => i.id))}.`,
     ]);
@@ -55,7 +55,7 @@ export const dunningRetriesExhausted = defineRule({
   evaluate({ openInvoices }, ctx) {
     const done = openInvoices.filter((i) => i.collection === "charge_automatically" && i.attemptCount >= 1 && i.nextPaymentAttempt === null);
     if (done.length === 0) return passed;
-    const lower = atLeast(ctx.truncated.has("openInvoices"));
+    const lower = atLeast(ctx.partial.has("openInvoices"));
     const attempts = done.map((i) => i.attemptCount);
     return failed("medium", `${lower}${plural(done.length, "invoice")} open with no retry left`, [
       `${sampleIds(done.map((i) => i.id))}; ${Math.min(...attempts) === Math.max(...attempts) ? `${plural(Math.min(...attempts), "attempt")} each` : `between ${Math.min(...attempts)} and ${Math.max(...attempts)} attempts each`}, no next attempt scheduled.`,

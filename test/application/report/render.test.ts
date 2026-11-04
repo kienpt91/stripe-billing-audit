@@ -27,7 +27,7 @@ describe("json report", () => {
   it("is valid JSON with a schema version and no undefined holes", () => {
     const parsed = JSON.parse(renderJson(reportFor(troubledFacts()))) as AuditReport;
     expect(parsed.schemaVersion).toBe(REPORT_SCHEMA_VERSION);
-    expect(Object.keys(parsed)).toEqual(["schemaVersion", "tool", "generatedAt", "account", "options", "summary", "findings", "checks", "skipped", "truncated", "ignoredObjects", "notReadable", "warnings", "requests", "exitCode"]);
+    expect(Object.keys(parsed)).toEqual(["schemaVersion", "tool", "generatedAt", "account", "options", "summary", "findings", "checks", "skipped", "partial", "ignoredObjects", "notReadable", "warnings", "requests", "exitCode"]);
     expect(parsed.findings.every((f) => typeof f.id === "string" && Array.isArray(f.evidence))).toBe(true);
   });
 
@@ -44,7 +44,8 @@ describe("a report built from hostile text", () => {
     return {
       ...base,
       warnings: [h()],
-      truncated: [h()],
+      partial: [{ resource: h(), cause: "cap" as const, detail: h() }],
+      checks: base.checks.map((c) => ({ ...c, status: "inconclusive" as const, detail: h() })),
       account: { ...base.account, id: h(), apiVersion: h() },
       findings: base.findings.map((f) => ({ ...f, title: h(), evidence: [h(), h()] })),
       skipped: [{ checkId: h(), reason: "permission", resource: h(), detail: h() }],

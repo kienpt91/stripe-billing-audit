@@ -15,6 +15,8 @@ Output (default is a terminal report):
 Gating:
   --fail-on <severity>       exit 1 when a finding is at least this severe:
                              critical, high, medium (default), low, info
+  --allow-partial-coverage   do not exit 5 when a listing or lookup stopped at a cap and a check found
+                             nothing in the part that was examined (the report still says so)
 
 Thresholds:
   --past-due-days <n>        subscriptions failing at least this long are reported (default 7)
@@ -40,9 +42,12 @@ Other:
   -v, --version              show the version
 
 Exit codes:
-  0  no finding at or above --fail-on, nothing skipped
+  0  no finding at or above --fail-on, every check ran on all the data it needed
   1  findings at or above --fail-on
-  2  usage error (bad option, missing or unsuitable key)
-  3  API or authentication error, the audit is incomplete
-  4  the key lacked permissions, some checks could not run (they are listed)
+  2  usage error (bad option, missing or unsuitable key, unsafe environment)
+  3  API or authentication error: a resource could not be read, or only in part, so the audit is incomplete
+  4  a resource was not available to the key (no permission, or not found), so some checks could not run
+  5  a cap (--max-pages, the 50-customer lookup) left checks inconclusive: they found nothing, but only in
+     part of the data; raise the cap, or accept it with --allow-partial-coverage
+  Codes 3, 4 and 5 outrank 1: a verdict on part of the account must not look like a verdict on all of it.
 `;

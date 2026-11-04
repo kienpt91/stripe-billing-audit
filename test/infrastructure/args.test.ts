@@ -23,12 +23,13 @@ describe("parseCommand", () => {
       timeoutMs: 15_000,
       skipCustomerLookup: false,
       includeEvents: false,
+      allowPartialCoverage: false,
     });
   });
 
   it("reads every option", () => {
-    const o = audit(["--markdown", "--fail-on", "high", "--allow-unrestricted-key", "--api-base", "http://127.0.0.1:1", "--past-due-days", "3", "--trial-days", "0", "--stale-invoice-days", "30", "--max-pages", "2", "--max-requests", "40", "--timeout-ms", "900", "--skip-customer-lookup", "--include-events"]);
-    expect(o).toMatchObject({ format: "markdown", failOn: "high", allowUnrestrictedKey: true, apiBase: "http://127.0.0.1:1", pastDueDays: 3, trialDays: 0, staleInvoiceDays: 30, maxPages: 2, maxRequests: 40, timeoutMs: 900, skipCustomerLookup: true, includeEvents: true });
+    const o = audit(["--markdown", "--fail-on", "high", "--allow-unrestricted-key", "--api-base", "http://127.0.0.1:1", "--past-due-days", "3", "--trial-days", "0", "--stale-invoice-days", "30", "--max-pages", "2", "--max-requests", "40", "--timeout-ms", "900", "--skip-customer-lookup", "--include-events", "--allow-partial-coverage"]);
+    expect(o).toMatchObject({ format: "markdown", failOn: "high", allowUnrestrictedKey: true, apiBase: "http://127.0.0.1:1", pastDueDays: 3, trialDays: 0, staleInvoiceDays: 30, maxPages: 2, maxRequests: 40, timeoutMs: 900, skipCustomerLookup: true, includeEvents: true, allowPartialCoverage: true });
     expect(audit(["--json"]).format).toBe("json");
   });
 

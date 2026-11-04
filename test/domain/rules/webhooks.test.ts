@@ -175,7 +175,7 @@ describe("webhook-deliveries-failing", () => {
 
   it("summarises failed deliveries", () => {
     const r = run(webhookDeliveriesFailing, {
-      failedEvents: ok([ev("evt_1", "invoice.paid", 2), ev("evt_2", "invoice.paid", 5), ev("evt_3", "customer.subscription.deleted", 1)], { truncated: true }),
+      failedEvents: ok([ev("evt_1", "invoice.paid", 2), ev("evt_2", "invoice.paid", 5), ev("evt_3", "customer.subscription.deleted", 1)], { partial: true }),
     });
     expect(r.finding?.title).toBe("at least 3 recent events with failed webhook deliveries");
     expect(r.finding?.evidence[0]).toBe("Most frequent types: invoice.paid (2), customer.subscription.deleted (1).");

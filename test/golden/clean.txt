@@ -9,4 +9,4 @@ Not readable through the Stripe API (see --checklist for what to check by hand):
 - Retry schedule and the state after the last retry
 - Failed-payment and renewal emails
 
-Summary: 0 findings; checks: 23 passed, 0 failed, 2 not applicable, 0 skipped; exit code 0 (nothing at or above the fail-on severity)
+Summary: 0 findings; checks: 23 passed, 0 failed, 2 not applicable, 0 skipped, 0 inconclusive; exit code 0 (nothing at or above the fail-on severity)

@@ -6,8 +6,8 @@ $ STRIPE_API_KEY=<restricted live key> stripe-billing-audit
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:40:40Z, 10 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:34483; this is a test setup, not Stripe.
+Checked 2026-11-04T14:54:25Z, 10 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:44627; this is a test setup, not Stripe.
 
 No findings.
 
@@ -19,7 +19,7 @@ Not readable through the Stripe API (see --checklist for what to check by hand):
 - Retry schedule and the state after the last retry
 - Failed-payment and renewal emails
 
-Summary: 0 findings; checks: 22 passed, 0 failed, 2 not applicable, 1 skipped; exit code 0 (nothing at or above the fail-on severity)
+Summary: 0 findings; checks: 22 passed, 0 failed, 2 not applicable, 1 skipped, 0 inconclusive; exit code 0 (nothing at or above the fail-on severity)
 [exit code 0]  (10 requests, all GET)
 
 ====================================================================================================
@@ -29,8 +29,8 @@ $ STRIPE_API_KEY=<restricted live key> stripe-billing-audit
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:40:40Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:39341; this is a test setup, not Stripe.
+Checked 2026-11-04T14:54:25Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:45825; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -119,7 +119,7 @@ Not readable through the Stripe API (see --checklist for what to check by hand):
 - Retry schedule and the state after the last retry
 - Failed-payment and renewal emails
 
-Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped; exit code 1 (findings at or above medium)
+Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped, 0 inconclusive; exit code 1 (findings at or above medium)
 [exit code 1]  (12 requests, all GET)
 
 ====================================================================================================
@@ -128,7 +128,7 @@ $ stripe-billing-audit --fail-on critical
 ====================================================================================================
 [... 231 lines left out of this transcript ...]
 
-Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped; exit code 0 (nothing at or above the fail-on severity)
+Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped, 0 inconclusive; exit code 0 (nothing at or above the fail-on severity)
 [exit code 0]  (12 requests, all GET)
 
 ====================================================================================================
@@ -138,8 +138,8 @@ $ stripe-billing-audit
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:40:41Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:36297; this is a test setup, not Stripe.
+Checked 2026-11-04T14:54:26Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:35607; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -170,8 +170,75 @@ Not readable through the Stripe API (see --checklist for what to check by hand):
 - Retry schedule and the state after the last retry
 - Failed-payment and renewal emails
 
-Summary: 13 findings (5 high, 5 medium, 3 low); checks: 4 passed, 13 failed, 0 not applicable, 8 skipped; exit code 4 (checks skipped for lack of permission)
+Summary: 13 findings (5 high, 5 medium, 3 low); checks: 4 passed, 13 failed, 0 not applicable, 8 skipped, 0 inconclusive; exit code 4 (checks skipped: a resource was not available to this key)
 [exit code 4]  (12 requests, all GET)
+
+====================================================================================================
+# A listing that is longer than the page cap: checks that found nothing are inconclusive
+$ stripe-billing-audit --max-pages 1
+====================================================================================================
+[... 13 lines left out of this transcript ...]
+  - subscription-delinquent: subscriptions: stopped at the page cap (1 page of 100); older objects
+    were not examined
+  - subscription-cancel-at-period-end-no-winback: subscriptions: stopped at the page cap (1 page of
+    100); older objects were not examined
+  - customer-no-default-payment-method: subscriptions: stopped at the page cap (1 page of 100);
+    older objects were not examined
+  - trial-ending-without-payment-method: subscriptions: stopped at the page cap (1 page of 100);
+    older objects were not examined
+  - tax-automatic-disabled: subscriptions: stopped at the page cap (1 page of 100); older objects
+    were not examined
+  - tax-settings-incomplete: subscriptions: stopped at the page cap (1 page of 100); older objects
+    were not examined
+  - currency-mixed: subscriptions: stopped at the page cap (1 page of 100); older objects were not
+    examined
+
+Partial coverage (what was not examined, so counts above are lower bounds):
+  - subscriptions [cap]: stopped at the page cap (1 page of 100); older objects were not examined
+
+Not readable through the Stripe API (see --checklist for what to check by hand):
+- Retry schedule and the state after the last retry
+- Failed-payment and renewal emails
+
+Summary: 0 findings; checks: 17 passed, 0 failed, 0 not applicable, 1 skipped, 7 inconclusive; exit code 5 (partial coverage: a cap left checks inconclusive)
+[exit code 5]  (10 requests, all GET)
+
+====================================================================================================
+# The same, accepted explicitly
+$ stripe-billing-audit --max-pages 1 --allow-partial-coverage
+====================================================================================================
+[... 34 lines left out of this transcript ...]
+
+Summary: 0 findings; checks: 17 passed, 0 failed, 0 not applicable, 1 skipped, 7 inconclusive; exit code 0 (nothing at or above the fail-on severity)
+[exit code 0]  (10 requests, all GET)
+
+====================================================================================================
+# The API fails in the middle of the customer lookups
+$ stripe-billing-audit
+====================================================================================================
+[... 5 lines left out of this transcript ...]
+
+No findings.
+
+Checks not run (switched off by the options):
+  - webhook-deliveries-failing: not requested; events can embed personal data, pass --include-events
+    to read them
+
+Inconclusive checks (they found nothing, but only in the part of the data that was examined):
+  - customer-no-default-payment-method: customer payment state: stopped after 2 of 5 customers: HTTP
+    503: Stripe server error
+  - trial-ending-without-payment-method: customer payment state: stopped after 2 of 5 customers:
+    HTTP 503: Stripe server error
+
+Partial coverage (what was not examined, so counts above are lower bounds):
+  - customer payment state [error]: stopped after 2 of 5 customers: HTTP 503: Stripe server error
+
+Not readable through the Stripe API (see --checklist for what to check by hand):
+- Retry schedule and the state after the last retry
+- Failed-payment and renewal emails
+
+Summary: 0 findings; checks: 21 passed, 0 failed, 1 not applicable, 1 skipped, 2 inconclusive; exit code 3 (API errors left the audit incomplete)
+[exit code 3]  (16 requests, all GET)
 
 ====================================================================================================
 # An unrestricted secret key is refused
@@ -194,10 +261,10 @@ $ stripe-billing-audit --markdown
 | Mode | live |
 | Key | restricted, read-only requests |
 | Account API version | `2025-09-30.clover` |
-| Checked | `2026-11-04T14:40:41Z` |
+| Checked | `2026-11-04T14:54:33Z` |
 | Tool | `stripe-billing-audit 0.1.0` |
 
-> Warning: `API base overridden to http://127.0.0.1:41875; this is a test setup, not Stripe.`
+> Warning: `API base overridden to http://127.0.0.1:41605; this is a test setup, not Stripe.`
 
 ## Summary
 
@@ -209,7 +276,7 @@ $ stripe-billing-audit --markdown
 | Low | 4 |
 | Info | 0 |
 
-25 checks ran: 4 passed, 17 failed, 3 not applicable, 1 skipped.
+25 checks ran: 4 passed, 17 failed, 3 not applicable, 1 skipped, 0 inconclusive.
 
 ## Findings
 
@@ -280,7 +347,7 @@ $ stripe-billing-audit --json
     "name": "stripe-billing-audit",
     "version": "0.1.0"
   },
-  "generatedAt": "2026-11-04T14:40:41Z",
+  "generatedAt": "2026-11-04T14:54:36Z",
   "account": {
     "id": "acct_1QAbCd…",
     "mode": "live",
@@ -297,7 +364,8 @@ $ stripe-billing-audit --json
       "staleInvoiceDays": 14
     },
     "customerLookup": true,
-    "includeEvents": false
+    "includeEvents": false,
+    "allowPartialCoverage": false
   },
   "summary": {
     "findings": 17,
@@ -312,15 +380,14 @@ $ stripe-billing-audit --json
       "passed": 4,
       "failed": 17,
       "not_applicable": 3,
-      "skipped": 1
+      "skipped": 1,
+      "inconclusive": 0
     }
   },
   "findings": [
-    {
-      "id": "webhook-lifecycle-events-missing",
-[... 383 lines left out of this transcript ...]
+[... 385 lines left out of this transcript ...]
   ],
-  "truncated": [],
+  "partial": [],
   "ignoredObjects": 0,
   "notReadable": [
     {
@@ -335,7 +402,7 @@ $ stripe-billing-audit --json
     }
   ],
   "warnings": [
-    "API base overridden to http://127.0.0.1:35975; this is a test setup, not Stripe."
+    "API base overridden to http://127.0.0.1:36507; this is a test setup, not Stripe."
   ],
   "requests": {
     "used": 12

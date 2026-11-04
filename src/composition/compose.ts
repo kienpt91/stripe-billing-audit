@@ -92,6 +92,7 @@ async function audit(options: AuditOptions, env: Readonly<Record<string, string 
         mode: key.value.mode,
         keyKind: key.value.kind,
         failOn: options.failOn,
+        allowPartialCoverage: options.allowPartialCoverage,
         thresholds: { pastDueDays: options.pastDueDays, trialDays: options.trialDays, staleInvoiceDays: options.staleInvoiceDays },
         collect: { maxPages: options.maxPages, maxCustomerLookups: MAX_CUSTOMER_LOOKUPS, customerLookup: !options.skipCustomerLookup, includeEvents: options.includeEvents },
         warnings,

@@ -7,9 +7,9 @@ export function sampleIds(ids: readonly string[], max = 5): string {
   return ids.length > max ? `${shown} (+${ids.length - max} more)` : shown;
 }
 
-/** `at least ` when the listing was cut at a cap, so a count is not mistaken for a total. */
-export function atLeast(truncated: boolean): string {
-  return truncated ? "at least " : "";
+/** `at least ` when the data is only a slice of what exists, so a count is not mistaken for a total. */
+export function atLeast(partial: boolean): string {
+  return partial ? "at least " : "";
 }
 
 export function plural(n: number, one: string, many = `${one}s`): string {

@@ -29,7 +29,7 @@ export const subscriptionDelinquent = defineRule({
       .map((s) => ({ s, since: failingSince(s, openInvoices) }))
       .filter((x): x is { s: Subscription; since: number } => x.since !== null && daysBetween(x.since, ctx.nowSeconds) >= limit);
     if (stale.length === 0) return passed;
-    const lower = atLeast(ctx.truncated.has("subscriptions"));
+    const lower = atLeast(ctx.partial.has("subscriptions"));
     const evidence: string[] = [];
     for (const status of DELINQUENT) {
       const group = stale.filter((x) => x.s.status === status);
@@ -55,7 +55,7 @@ export const subscriptionCancelWithoutWinback = defineRule({
     const pending = subscriptions.filter((s) => s.cancelAtPeriodEnd && isBilling(s));
     if (pending.length === 0) return notApplicable("no subscription is set to cancel at period end");
     const active = portalConfigurations.filter((c) => c.active);
-    const lower = atLeast(ctx.truncated.has("subscriptions"));
+    const lower = atLeast(ctx.partial.has("subscriptions"));
     const header = `${lower}${plural(pending.length, "subscription")} set to cancel at period end: ${sampleIds(pending.map((s) => s.id))}.`;
     const ends = pending.map((s) => s.currentPeriodEnd).filter((e): e is number => e !== null);
     const soonest = ends.length > 0 ? `Earliest period end: ${isoDate(Math.min(...ends))}.` : "Period end dates were not available.";

@@ -19,7 +19,7 @@ describe("collectFacts on a healthy account", () => {
     expect(facts.mode).toBe("live");
     expect(facts.nowSeconds).toBe(NOW);
     expect(facts.account).toMatchObject({ status: "ok", value: { id: "acct_1AbCdEfGhIjKl", apiVersion: "2025-09-30.clover", defaultCurrency: "usd" } });
-    expect(facts.webhookEndpoints).toMatchObject({ status: "ok", truncated: false, value: [{ id: "we_1AbCdEfGhIjKl" }] });
+    expect(facts.webhookEndpoints).toMatchObject({ status: "ok", partial: null, value: [{ id: "we_1AbCdEfGhIjKl" }] });
     expect(facts.taxSettings).toMatchObject({ status: "ok", value: { status: "active", hasDefaultTaxCode: true } });
   });
 
@@ -51,14 +51,14 @@ describe("pagination", () => {
   it("follows cursors across pages and returns every object once", async () => {
     const reader = healthyReader().on("/v1/subscriptions", paged(subs(250), 100));
     const facts = await collect(reader);
-    expect(facts.subscriptions).toMatchObject({ status: "ok", truncated: false });
+    expect(facts.subscriptions).toMatchObject({ status: "ok", partial: null });
     expect(facts.subscriptions.status === "ok" && facts.subscriptions.value).toHaveLength(250);
     expect(reader.calls.filter((c) => c.path === "/v1/subscriptions").map((c) => c.query.starting_after)).toEqual([undefined, "sub_000099", "sub_000199"]);
   });
 
-  it("stops at the page cap and says the listing is truncated", async () => {
+  it("stops at the page cap and says the listing is partial, because of the cap", async () => {
     const facts = await collect(healthyReader().on("/v1/subscriptions", paged(subs(1000), 100)), { maxPages: 3 });
-    expect(facts.subscriptions).toMatchObject({ status: "ok", truncated: true });
+    expect(facts.subscriptions).toMatchObject({ status: "ok", partial: { cause: "cap", detail: "stopped at the page cap (3 pages of 100); older objects were not examined" } });
     expect(facts.subscriptions.status === "ok" && facts.subscriptions.value).toHaveLength(300);
   });
 
@@ -72,7 +72,7 @@ describe("pagination", () => {
       const value = facts.subscriptions.status === "ok" ? facts.subscriptions.value : [];
       expect(value.length).toBe(Math.min(total, maxPages * pageSize));
       expect(new Set(value.map((s) => s.id)).size).toBe(value.length);
-      expect(facts.subscriptions.status === "ok" && facts.subscriptions.truncated).toBe(total > maxPages * pageSize);
+      expect(facts.subscriptions.status === "ok" && facts.subscriptions.partial !== null).toBe(total > maxPages * pageSize);
     }
   });
 
@@ -186,15 +186,23 @@ describe("customer payment state", () => {
 
   it("honours the lookup cap and flags the result as partial", async () => {
     const facts = await collect(reader(), { maxCustomerLookups: 1 });
-    expect(facts.customers).toMatchObject({ status: "ok", truncated: true, value: { wanted: 3 } });
+    expect(facts.customers).toMatchObject({ status: "ok", partial: { cause: "cap", detail: "looked up 1 of 3 customers (cap of 1); the rest were not examined" }, value: { wanted: 3 } });
     expect(facts.customers.status === "ok" && facts.customers.value.checked).toHaveLength(1);
   });
 
-  it("returns what it has when the budget runs out mid-way, and nothing when it runs out at once", async () => {
+  it("returns what it has when the budget runs out mid-way, naming the budget and not the cap, and nothing when it runs out at once", async () => {
     const partial = await collect(reader().on("/v1/customers/cus_1", fail("budget", null)));
-    expect(partial).toMatchObject({ customers: { status: "ok", truncated: true } });
+    expect(partial).toMatchObject({ customers: { status: "ok", partial: { cause: "budget", detail: "stopped after 1 of 3 customers: the request budget was spent" } } });
     const none = await collect(reader().on("/v1/customers/cus_0", fail("budget", null)));
     expect(none.customers).toMatchObject({ status: "unreadable", reason: "budget" });
+  });
+
+  it("reports an API error after some progress as a partial result caused by the error, not by the cap", async () => {
+    for (const [kind, status, text] of [["server", 503, "HTTP 503: Stripe server error"], ["rate_limited", 429, "HTTP 429: still rate limited after retries"], ["timeout", null, "request timed out"], ["network", null, "network error"], ["malformed", 200, "the response was not valid JSON"], ["too_large", 200, "the response was larger than the size limit"]] as const) {
+      const facts = await collect(reader().on("/v1/customers/cus_1", fail(kind, status)));
+      expect(facts.customers, kind).toMatchObject({ status: "ok", partial: { cause: "api_error", detail: `stopped after 1 of 3 customers: ${text}` } });
+      expect(facts.customers.status === "ok" && facts.customers.value.checked).toHaveLength(1);
+    }
   });
 
   it("makes the whole fact unreadable on a permission error and depends on the subscription listing", async () => {
@@ -212,7 +220,7 @@ describe("events", () => {
   it("reads one page of failed deliveries only when asked, and keeps no payload", async () => {
     const r = healthyReader().on("/v1/events", () => body({ data: [{ id: "evt_1", type: "invoice.paid", created: NOW - 100, pending_webhooks: 1, data: { object: { customer_email: "a@example.com" } } }], has_more: true }));
     const facts = await collect(r, { includeEvents: true });
-    expect(facts.failedEvents).toMatchObject({ status: "ok", truncated: true, value: [{ id: "evt_1", type: "invoice.paid" }] });
+    expect(facts.failedEvents).toMatchObject({ status: "ok", partial: { cause: "cap" }, value: [{ id: "evt_1", type: "invoice.paid" }] });
     expect(JSON.stringify(facts)).not.toContain("@example.com");
     expect(r.calls.find((c) => c.path === "/v1/events")?.query).toEqual({ delivery_success: "false", limit: "25" });
   });

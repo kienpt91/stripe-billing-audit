@@ -19,7 +19,7 @@
 | Low | 0 |
 | Info | 0 |
 
-25 checks ran: 23 passed, 0 failed, 2 not applicable, 0 skipped.
+25 checks ran: 23 passed, 0 failed, 2 not applicable, 0 skipped, 0 inconclusive.
 
 ## Findings
 

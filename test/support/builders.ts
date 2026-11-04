@@ -5,6 +5,7 @@ import type {
   FactValues,
   Facts,
   Invoice,
+  PartialCoverage,
   PortalConfiguration,
   Price,
   Product,
@@ -21,8 +22,10 @@ export const DAY = 86_400;
 
 export const THRESHOLDS: Thresholds = { pastDueDays: 7, trialDays: 7, staleInvoiceDays: 14 };
 
-export function ok<T>(value: T, extra: { truncated?: boolean; malformed?: number } = {}): Fact<T> {
-  return { status: "ok", value, truncated: extra.truncated ?? false, malformed: extra.malformed ?? 0 };
+/** `partial: true` stands for a listing stopped at the page cap. */
+export function ok<T>(value: T, extra: { partial?: PartialCoverage | true; malformed?: number } = {}): Fact<T> {
+  const partial = extra.partial === true ? ({ cause: "cap", detail: "stopped at the page cap (5 pages of 100); older objects were not examined" } as const) : (extra.partial ?? null);
+  return { status: "ok", value, partial, malformed: extra.malformed ?? 0 };
 }
 
 export function unreadable(reason: "permission" | "not_available" | "api_error" | "budget" | "disabled", resource = "things", detail = "HTTP 403"): Fact<never> {

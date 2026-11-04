@@ -1,4 +1,4 @@
-import type { CheckResult, Evaluation, SkippedCheck } from "./engine.js";
+import type { CheckResult, Evaluation, PartialFact, SkippedCheck } from "./engine.js";
 import type { Facts } from "./facts.js";
 import type { Finding, Thresholds } from "./rule.js";
 import { MANUAL_ITEMS, type ManualItem } from "./manual.js";
@@ -27,6 +27,7 @@ export interface AuditReport {
     readonly thresholds: Thresholds;
     readonly customerLookup: boolean;
     readonly includeEvents: boolean;
+    readonly allowPartialCoverage: boolean;
   };
   readonly summary: {
     readonly findings: number;
@@ -36,8 +37,8 @@ export interface AuditReport {
   readonly findings: readonly Finding[];
   readonly checks: readonly CheckResult[];
   readonly skipped: readonly SkippedCheck[];
-  /** Resources listed only up to a cap: counts for them are lower bounds. */
-  readonly truncated: readonly string[];
+  /** Resources read only in part (a cap, or a failure part way through): counts for them are lower bounds. */
+  readonly partial: readonly PartialFact[];
   /** Objects with an unexpected shape that were left out. */
   readonly ignoredObjects: number;
   readonly notReadable: ReadonlyArray<Pick<ManualItem, "id" | "area" | "title">>;
@@ -61,7 +62,7 @@ export function buildReport(input: ReportInput): AuditReport {
   const { facts, evaluation } = input;
   const account = facts.account.status === "ok" ? facts.account.value : null;
   const bySeverity = Object.fromEntries(SEVERITIES.map((s) => [s, evaluation.findings.filter((f) => f.severity === s).length])) as Record<Severity, number>;
-  const statuses: CheckResult["status"][] = ["passed", "failed", "not_applicable", "skipped"];
+  const statuses: CheckResult["status"][] = ["passed", "failed", "not_applicable", "skipped", "inconclusive"];
   const checks = Object.fromEntries(statuses.map((s) => [s, evaluation.checks.filter((c) => c.status === s).length])) as Record<CheckResult["status"], number>;
   return {
     schemaVersion: REPORT_SCHEMA_VERSION,
@@ -80,7 +81,7 @@ export function buildReport(input: ReportInput): AuditReport {
     findings: evaluation.findings,
     checks: evaluation.checks,
     skipped: evaluation.skipped,
-    truncated: evaluation.truncated,
+    partial: evaluation.partial,
     ignoredObjects: evaluation.malformed,
     notReadable: MANUAL_ITEMS.filter((m) => m.inEveryReport).map(({ id, area, title }) => ({ id, area, title })),
     warnings: input.warnings,

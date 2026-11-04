@@ -38,7 +38,7 @@ export function reportFor(f: Facts, over: { failOn?: "info" | "low" | "medium" |
     facts: f,
     evaluation,
     keyKind: "restricted",
-    options: { failOn, thresholds: THRESHOLDS, customerLookup: true, includeEvents: false },
+    options: { failOn, thresholds: THRESHOLDS, customerLookup: true, includeEvents: false, allowPartialCoverage: false },
     warnings: [],
     requestsUsed: 17,
     exitCode: exitCodeFor(evaluation, failOn),

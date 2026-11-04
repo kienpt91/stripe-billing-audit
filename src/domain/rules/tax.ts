@@ -24,7 +24,7 @@ export const taxAutomaticDisabled = defineRule({
     const off = subscriptions.filter((s) => isBilling(s) && s.automaticTax === false);
     if (off.length === 0) return passed;
     const billing = subscriptions.filter(isBilling).length;
-    const lower = atLeast(ctx.truncated.has("subscriptions"));
+    const lower = atLeast(ctx.partial.has("subscriptions"));
     return failed("high", `${lower}${plural(off.length, "subscription")} without automatic tax`, [
       `${plural(taxRegistrations.length, "active tax registration")}, and ${lower}${off.length} of ${billing} billing subscriptions have automatic tax off: ${sampleIds(off.map((s) => s.id))}.`,
     ]);
@@ -64,7 +64,7 @@ export const taxBehaviorUnspecified = defineRule({
     const bad = prices.filter((p) => p.taxBehavior === "unspecified");
     if (bad.length === 0) return passed;
     if (taxSettings?.hasDefaultTaxBehavior === true) return passed;
-    const lower = atLeast(ctx.truncated.has("prices"));
+    const lower = atLeast(ctx.partial.has("prices"));
     return failed("medium", `${lower}${plural(bad.length, "active price")} with no tax behavior`, [
       `${sampleIds(bad.map((p) => p.id))}.`,
       taxSettings === null || taxSettings === undefined ? "No default tax behavior could be read from the tax settings." : "The tax settings define no default tax behavior.",
@@ -85,7 +85,7 @@ export const taxProductCodeMissing = defineRule({
     if (taxSettings?.hasDefaultTaxCode === true) return passed;
     const bad = products.filter((p) => !p.hasTaxCode);
     if (bad.length === 0) return passed;
-    const lower = atLeast(ctx.truncated.has("products"));
+    const lower = atLeast(ctx.partial.has("products"));
     return failed("low", `${lower}${plural(bad.length, "active product")} with no tax code`, [`${sampleIds(bad.map((p) => p.id))}; the tax settings define no default tax code.`]);
   },
 });

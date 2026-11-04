@@ -4,12 +4,28 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { FakeStripe } from "../test/support/fake-stripe.ts";
-import { cleanWorld, troubledWorld, type World } from "../test/support/stripe-fixtures.ts";
+import { cleanWorld, customer, subscription, troubledWorld, type World } from "../test/support/stripe-fixtures.ts";
 import { fakeKey } from "../test/support/keys.ts";
 
 const bin = resolve(import.meta.dirname, "../dist/bin.js");
 const key = fakeKey("rk", "live");
 const now = Math.floor(Date.now() / 1000);
+
+/** A busy account: more subscriptions than one page holds. */
+function busyWorld(): World {
+  const world = cleanWorld(now);
+  world.subscriptions = Array.from({ length: 150 }, (_, i) => subscription(world, { id: `sub_${String(i).padStart(8, "0")}` }));
+  return world;
+}
+
+/** Five subscriptions with no payment method of their own; their customers have one. */
+function customersWorld(): World {
+  const world = cleanWorld(now);
+  const id = (i: number): string => String(i).padStart(8, "0");
+  world.subscriptions = Array.from({ length: 5 }, (_, i) => subscription(world, { id: `sub_${id(i)}`, customer: `cus_${id(i)}`, default_payment_method: null }));
+  world.customers = Object.fromEntries(Array.from({ length: 5 }, (_, i) => [`cus_${id(i)}`, customer({ id: `cus_${id(i)}` })]));
+  return world;
+}
 
 /** Long reports are shown in part: the first `head` and the last `tail` lines. */
 interface Excerpt {
@@ -51,6 +67,17 @@ await run("The same account, gating only on critical findings", "stripe-billing-
 await run("A key that cannot read tax data or the Billing portal", "stripe-billing-audit", [], troubledWorld(now), {
   setup: (s) => void s.denied.add("/v1/tax/registrations").add("/v1/tax/settings").add("/v1/billing_portal"),
   part: { head: 12, tail: 24 },
+});
+await run("A listing that is longer than the page cap: checks that found nothing are inconclusive", "stripe-billing-audit --max-pages 1", ["--max-pages", "1"], busyWorld(), { part: { head: 0, tail: 24 } });
+await run("The same, accepted explicitly", "stripe-billing-audit --max-pages 1 --allow-partial-coverage", ["--max-pages", "1", "--allow-partial-coverage"], busyWorld(), { part: { head: 0, tail: 3 } });
+await run("The API fails in the middle of the customer lookups", "stripe-billing-audit", [], customersWorld(), {
+  setup: (s) =>
+    void s.overrides.set("/v1/customers/cus_00000002", (_req, res) => {
+      res.writeHead(503);
+      res.end("{}");
+      return true;
+    }),
+  part: { head: 0, tail: 22 },
 });
 await run("An unrestricted secret key is refused", "STRIPE_API_KEY=<secret key> stripe-billing-audit", [], cleanWorld(now), { env: { STRIPE_API_KEY: fakeKey("sk", "live") }, serverKey: fakeKey("sk", "live") });
 await run("A report to hand to a client", "stripe-billing-audit --markdown", ["--markdown"], troubledWorld(now), { part: { head: 60, tail: 22 } });

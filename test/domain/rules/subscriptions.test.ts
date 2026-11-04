@@ -30,7 +30,7 @@ describe("subscription-delinquent", () => {
           sub({ id: "sub_2unpaidbbbb", status: "unpaid", currentPeriodStart: null, created: NOW - 40 * DAY }),
           sub({ id: "sub_3incompleteccc", status: "incomplete", currentPeriodStart: NOW - 99 * DAY, created: NOW - 8 * DAY }),
         ],
-        { truncated: true },
+        { partial: true },
       ),
     });
     expect(r.finding?.title).toBe("at least 3 subscriptions failing for 7+ days");

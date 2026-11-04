@@ -4,12 +4,24 @@ import type { SafeUrl } from "./stripe/identifiers.js";
 /** Why a resource could not be read. Only `permission` and `api_error`/`budget` change the exit code. */
 export type UnreadableReason = "permission" | "not_available" | "api_error" | "budget" | "disabled";
 
+/** Why a fact covers only part of what exists. */
+export type PartialCause = "cap" | "api_error" | "budget";
+
+export interface PartialCoverage {
+  readonly cause: PartialCause;
+  /** What was examined and what was not, for the report. */
+  readonly detail: string;
+}
+
 export type Fact<T> =
   | {
       readonly status: "ok";
       readonly value: T;
-      /** A pagination cap or the request budget stopped the listing before the end. */
-      readonly truncated: boolean;
+      /**
+       * Null when everything that exists was read. Otherwise the value is a slice, and a rule that finds
+       * nothing in it cannot say the rest is fine: the check is reported as inconclusive.
+       */
+      readonly partial: PartialCoverage | null;
       /** Objects whose shape was not understood and that were left out. */
       readonly malformed: number;
     }

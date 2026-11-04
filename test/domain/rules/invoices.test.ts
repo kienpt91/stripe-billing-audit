@@ -11,7 +11,7 @@ describe("invoice-stuck-open", () => {
 
   it("totals the amounts per currency and names the oldest date", () => {
     const r = run(invoiceStuckOpen, {
-      openInvoices: ok([invoice({ created: NOW - 30 * DAY }), invoice({ id: "in_2b", created: NOW - 20 * DAY, amountDue: 1000, currency: "eur" }), invoice({ id: "in_3c", created: NOW - 2 * DAY })], { truncated: true }),
+      openInvoices: ok([invoice({ created: NOW - 30 * DAY }), invoice({ id: "in_2b", created: NOW - 20 * DAY, amountDue: 1000, currency: "eur" }), invoice({ id: "in_3c", created: NOW - 2 * DAY })], { partial: true }),
     });
     expect(r.finding?.severity).toBe("medium");
     expect(r.finding?.title).toBe("at least 2 invoices open for 14+ days");

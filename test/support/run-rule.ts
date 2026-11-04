@@ -3,7 +3,7 @@ import type { Finding, Rule, Thresholds } from "../../src/domain/rule.js";
 import { facts, THRESHOLDS } from "./builders.js";
 
 export interface RuleRun {
-  readonly status: "passed" | "failed" | "not_applicable" | "skipped";
+  readonly status: "passed" | "failed" | "not_applicable" | "skipped" | "inconclusive";
   readonly finding: Finding | undefined;
   readonly detail: string | null;
 }

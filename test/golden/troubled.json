@@ -21,7 +21,8 @@
       "staleInvoiceDays": 14
     },
     "customerLookup": true,
-    "includeEvents": false
+    "includeEvents": false,
+    "allowPartialCoverage": false
   },
   "summary": {
     "findings": 16,
@@ -36,7 +37,8 @@
       "passed": 5,
       "failed": 16,
       "not_applicable": 3,
-      "skipped": 1
+      "skipped": 1,
+      "inconclusive": 0
     }
   },
   "findings": [
@@ -415,7 +417,7 @@
       "detail": "HTTP 403: the key lacks the read permission for this resource"
     }
   ],
-  "truncated": [],
+  "partial": [],
   "ignoredObjects": 0,
   "notReadable": [
     {
