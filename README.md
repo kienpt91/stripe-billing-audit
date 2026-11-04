@@ -3,8 +3,8 @@
 A read-only command-line audit of the billing setup of a Stripe account. Point it at a **restricted key with read permissions** and it reports concrete gaps in webhook endpoints, subscriptions, failed-payment handling, invoices, the Billing portal, tax settings and currencies, each with the evidence it saw, why it matters and a suggested fix. It is meant for the request "review our Stripe billing and make it reliable": run it first, hand the Markdown report to the client, and fix the findings.
 
 - **Read-only by construction.** GET requests to a fixed allowlist of eleven paths. It never writes to Stripe, and the source tree cannot write to disk or start a process (an architecture test fails otherwise).
-- **No personal data in the report.** Customer emails, names and addresses are never requested, kept or printed; ids are shortened; webhook URLs are masked. Read [what exactly that means](#personal-data) before you rely on it.
-- **Honest about what it cannot see.** A resource the key cannot read skips the checks that need it, with the reason, and the run exits 4 instead of pretending to be clean. Retry and dunning settings are not exposed by the Stripe API; the report says so and `--checklist` lists what to look at by hand.
+- **No personal data in the report.** Customer emails, names and addresses are never kept or printed; the tool lists no customers and searches nothing, and reads a customer object only for two checks (`--skip-customer-lookup` turns that off); ids are shortened; webhook URLs are masked. Read [what exactly that means](#personal-data) before you rely on it.
+- **Honest about what it cannot see.** A resource the key cannot read skips the checks that need it, with the reason, and the run exits 4 instead of pretending to be clean. A check that found nothing in only part of the data (a page cap, the customer lookup cap, a lookup that failed part way) is reported as **inconclusive**, never as passed, and the exit code says so. Retry and dunning settings are not exposed by the Stripe API; the report says so and `--checklist` lists what to look at by hand.
 - **Zero runtime dependencies.** Node 24 built-ins only (`fetch`, `parseArgs`).
 
 It has been tested against a fake Stripe server on loopback, not against a real Stripe account (see [Limitations](#limitations-and-what-was-not-verified)).
@@ -23,6 +23,8 @@ node dist/bin.js --fail-on high                 # for CI: exit 1 when a finding 
 node dist/bin.js --checklist                    # the manual items the API cannot show (no key needed)
 ```
 
+The default caps read the newest 500 objects per listing (`--max-pages 5`) and look up 50 customers. On a larger account a default run therefore ends with exit code 5 and says which checks are inconclusive; raise `--max-pages` (up to 50), or pass `--allow-partial-coverage` to accept that. See [Incomplete coverage](#incomplete-coverage).
+
 The key is never a command-line argument. The report starts with the mode (`LIVE` or `TEST`, from the key prefix). An unrestricted `sk_` key is refused unless you pass `--allow-unrestricted-key` (the tool still only reads, but the key could write).
 
 ## Demo
@@ -35,8 +37,8 @@ The output below is real. It comes from `npm run demo`, which starts the real co
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:54:25Z, 10 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:44627; this is a test setup, not Stripe.
+Checked 2026-11-04T15:00:54Z, 10 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:43335; this is a test setup, not Stripe.
 
 No findings.
 
@@ -60,8 +62,8 @@ This is the beginning and the end of a report with 17 findings; the full transcr
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:54:25Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:45825; this is a test setup, not Stripe.
+Checked 2026-11-04T15:00:54Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:45419; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -119,7 +121,7 @@ Warning: API base overridden to http://127.0.0.1:45825; this is a test setup, no
 
 [HIGH] trial-ending-without-payment-method: 1 trial ending within 7 days with no payment method
   Evidence:
-    - sub_1Trial…; the first ends 2026-11-06 (in 2 days).
+    - sub_1Trial…; the first ends 2026-11-06 (in 1 days).
     - Behaviour when the trial ends without a payment method: create_invoice.
   Why it matters:
     When a trial ends with no payment method the first invoice cannot be paid: the customer is
@@ -162,8 +164,8 @@ The key may not read tax data or the Billing portal. The checks that need them a
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:54:26Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:35607; this is a test setup, not Stripe.
+Checked 2026-11-04T15:00:54Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:41801; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -338,7 +340,7 @@ Retry schedule and dunning emails are **not readable** through the API. The repo
 
 ## Report formats
 
-- **Terminal**: findings worst first, then skipped checks, then what the API cannot show, then a summary line. Every control character, escape sequence and bidi override in API-derived text is shown as a visible escape.
+- **Terminal**: findings worst first, then skipped, switched-off and inconclusive checks, partial coverage, what the API cannot show, then a summary line. Every control character, escape sequence and bidi override in API-derived text is shown as a visible escape.
 - **Markdown** (`--markdown`): headings and tables for a client. API-derived text appears only inside code spans and fenced blocks, so it cannot turn into markup.
 - **JSON** (`--json`): stable schema with `schemaVersion`; see [docs/json-output.md](docs/json-output.md).
 
@@ -347,7 +349,7 @@ Retry schedule and dunning emails are **not readable** through the API. The repo
 What is guaranteed, and by which tests:
 
 - The tool does not call any listing of customers, any search endpoint or any `expand`. Every Stripe object is decoded by a function that picks named fields (ids, enums, counts, timestamps, booleans); emails, names, phone numbers, addresses, descriptions and metadata are dropped on arrival. The tests plant them in every fixture and assert that none reaches the terminal, Markdown or JSON output with every option on.
-- Ids are shortened (`sub_1QwErT…`), webhook URLs are reduced to scheme, host and a masked path.
+- Ids are shortened (`sub_1QwErT…`). Webhook URLs are reduced to scheme, host and path; every path segment that is not a short lowercase word (letters and hyphens, at most 20 characters) is replaced by `…`, and the query string, fragment and credentials are dropped. **Not masked:** the host (it identifies the endpoint, so a secret placed in a subdomain would be shown) and a secret that is itself a short lowercase word in a path segment. Duplicate endpoints are detected on a fingerprint of the whole URL, which is never printed.
 
 What is not guaranteed: the Stripe API cannot filter fields, so a response to `GET /v1/customers/{id}` (used, for at most 50 customers, to learn whether a default payment method exists) and to `GET /v1/events` (only with `--include-events`) contains personal data in its body. That body travels over TLS to the machine running the tool, the decoder keeps one boolean (or the event type, time and counter), and the rest is discarded in memory: nothing is stored, logged or printed. `--skip-customer-lookup` and leaving events off remove those two calls. Invoice, subscription and account listings also carry some personal or business fields (customer email on invoices, free-text descriptions, the owner's email) that the decoders drop. See [ADR 0004](docs/adr/0004-personal-data-policy.md).
 
@@ -366,14 +368,14 @@ Imports point inward only, and `test/architecture/layers.test.ts` enforces it ov
 1. [Layers and the dependency rule](docs/adr/0001-layers-and-the-dependency-rule.md)
 2. [Read-only by construction](docs/adr/0002-read-only-by-construction.md)
 3. [Unreadable facts and skipped checks instead of guesses](docs/adr/0003-unreadable-facts-instead-of-guesses.md)
-4. [Personal data: never requested, never kept](docs/adr/0004-personal-data-policy.md)
+4. [Personal data: little is fetched, none is kept or printed](docs/adr/0004-personal-data-policy.md)
 5. [How the API key is handled](docs/adr/0005-key-handling.md)
 6. [Zero runtime dependencies and the supply-chain policy](docs/adr/0006-no-runtime-dependencies.md)
 7. [Report formats and the JSON schema version](docs/adr/0007-report-formats-and-schema.md)
 
 ## Threat model (summary)
 
-The API's answers are untrusted (a crafted account, a proxy, a mock on the wrong port). The key is read from the environment, sent only to `api.stripe.com` or a loopback IP, never follows a redirect, and is never in a fact, error or report; a last-line redaction removes key-shaped text from everything printed. Hostile JSON (huge bodies, wrong types, deep nesting, endless cursors, control characters) cannot crash the tool or reach the terminal unescaped. The full table with residual risks is in [SECURITY.md](SECURITY.md).
+The API's answers are untrusted (a crafted account, a proxy, a mock on the wrong port). The key is read from the environment, sent only to `api.stripe.com` or a loopback IP, never follows a redirect, and is never in a fact, error or report; a last-line redaction removes key-shaped text from everything printed, usage errors included. The tool refuses to run with `NODE_USE_ENV_PROXY` (the key would go to a proxy) or `NODE_TLS_REJECT_UNAUTHORIZED=0`, and reports `NODE_EXTRA_CA_CERTS`. Hostile JSON (huge bodies, wrong types, deep nesting, endless cursors, control characters) cannot crash the tool or reach the terminal unescaped. The full table with residual risks is in [SECURITY.md](SECURITY.md).
 
 ## Tests and coverage
 
@@ -381,25 +383,25 @@ Run in a throwaway container, offline. Every test talks to an in-memory fake or 
 
 | Layer | Tests | What they cover |
 | --- | ---: | --- |
-| Domain | 142 | every rule over small fixtures (passed, failed, not applicable, skipped), severity and exit-code precedence, report model, key classification, API base restriction, path allowlist, redaction, request budget, calendar and money arithmetic, id shortening and URL masking; property tests for text sanitising, id truncation and calendar arithmetic |
-| Application | 57 | decoders against hostile and random input (property test: never throws) and against fixtures with planted personal data; the collector against an in-memory API: pagination (property test: exactly `min(total, cap)` objects, no duplicates, whatever the page size), caps, non-advancing cursors, every failure kind, bounded customer lookup; terminal, Markdown and JSON renderers with golden files and property tests over hostile strings |
+| Domain | 154 | every rule over small fixtures (passed, failed, not applicable, skipped), severity and exit-code precedence, report model, key classification, API base restriction, path allowlist, redaction, request budget, calendar and money arithmetic, id shortening, URL masking and fingerprints, partial coverage in the engine (inconclusive versus passed, not applicable and failed), exit-code precedence; property tests for text sanitising, id truncation and calendar arithmetic |
+| Application | 58 | decoders against hostile and random input (property test: never throws) and against fixtures with planted personal data; the collector against an in-memory API: pagination (property test: exactly `min(total, cap)` objects, no duplicates, whatever the page size), caps, non-advancing cursors, every failure kind, bounded customer lookup including a failure part way through it (every failure kind, cap versus error versus budget); terminal, Markdown and JSON renderers with golden files and property tests over hostile strings |
 | Infrastructure | 32 | the HTTP reader against a real loopback server: bearer key, allowlist refusal, 401/403/404/4xx, 429 with `Retry-After` and exponential backoff, 5xx, budget, timeout, size limit on a streamed body, invalid JSON, a redirect that must not be followed, unreachable host, key never echoed; the argument parser |
 | Architecture | 50 | the dependency rule over every source file, plus tests of the checker itself |
-| End to end | 115 | 110 through `runCli` with real `fetch` against the fake Stripe server (clean and troubled accounts, test and live keys, every exit code, thresholds, options, every output format, personal data and secrets never printed, a matrix of nine hostile answers on each of nine endpoints, an oversized body, a server that echoes the key); 5 through the compiled `dist/bin.js` as a child process in an empty directory (nothing is written there) |
-| Docs | 24 | `docs/checks.md` is generated from the rule catalogue and must match it, version and changelog agree, no runtime dependencies, exact pins, every option and exit code is in this README, no broken relative links |
-| **Total** | **420** | all passing |
+| End to end | 129 | 124 through `runCli` with real `fetch` against the fake Stripe server (clean and troubled accounts, test and live keys, every exit code, thresholds, options, every output format, personal data and secrets never printed, a matrix of nine hostile answers on each of nine endpoints, an oversized body, a server that echoes the key; failures in the middle of the customer lookup, the page cap and the 50-customer cap with and without `--allow-partial-coverage`, a 404, an environment proxy, a key typed as an option name); 5 through the compiled `dist/bin.js` as a child process in an empty directory (nothing is written there) |
+| Docs | 26 | `docs/checks.md` is generated from the rule catalogue and must match it, version and changelog agree, no runtime dependencies, exact pins, every option and exit code is in this README, no broken relative links |
+| **Total** | **449** | all passing |
 
 Coverage, measured with `npm run coverage` (V8; the thresholds below fail the run and CI):
 
 | Layer | Statements | Lines | Threshold |
 | --- | ---: | ---: | --- |
 | `src/domain` | 99.84 % | 100 % | 95 % lines and statements |
-| `src/application` | 99.39 % | 99.63 % | 90 % |
+| `src/application` | 99.44 % | 99.66 % | 90 % |
 | `src/infrastructure` | 94.92 % | 97.80 % | (overall) |
-| `src/composition` | 89.09 % | 91.84 % | (overall) |
-| **All files** | **98.65 %** | **99.18 %** | 85 % |
+| `src/composition` | 90.16 % | 92.59 % | (overall) |
+| **All files** | **98.71 %** | **99.23 %** | 85 % |
 
-Branches overall: 95.48 %, functions 97.29 %.
+Branches overall: 95.14 %, functions 97.35 %.
 
 `src/composition/main.ts` (the three lines that connect `process` to `runCli`) is exercised only by the compiled-binary tests, which run in a child process that V8 coverage in the test process does not see; `src/bin.ts` is excluded for the same reason.
 
@@ -415,8 +417,8 @@ docker run --rm -v "$PWD":/work -w /work node:24 sh -c 'npm ci --ignore-scripts 
 - **Permission names are unverified.** `docs/checks.md` lists the endpoints and the resource behind each. How the dashboard names the matching restricted-key permissions was not checked; a missing permission shows up as a skipped check with HTTP 403.
 - **Approximations, stated in the evidence:** the age of a failing subscription is counted from its oldest open invoice, or from its current period start when no open invoice was listed (a lower bound); the win-back check can only see whether the Billing portal lets customers undo a cancellation and asks why, not whether you send a win-back email; the account's default API version is taken from the `Stripe-Version` response header of the account call; "development host" for webhook URLs is a list of common patterns (localhost, private ranges, `.local`, `.test`, ngrok, Cloudflare quick tunnels and similar).
 - **Not read at all:** retry and dunning settings, email settings, your webhook handler's code. Connect platforms and multi-account setups were not considered.
-- **Caps:** 5 pages of 100 objects per listing and 50 customer lookups by default; a capped listing is flagged and its counts are lower bounds.
-- Developed and tested on macOS (editing) and Linux (containers); Windows was not tried. Node 24 is required. `fetch` does not use `HTTPS_PROXY` unless Node is started with `NODE_USE_ENV_PROXY`, which this tool does not test.
+- **Caps are strict by default:** 5 pages of 100 objects per listing, 50 customer lookups. A check that found nothing in a capped listing is inconclusive and the run exits 5 until you raise `--max-pages` or pass `--allow-partial-coverage`; the customer lookup cap is not configurable. Findings in a capped listing are real but their counts are lower bounds.
+- Developed and tested on macOS (editing) and Linux (containers); Windows was not tried. Node 24 is required. The tool refuses `NODE_USE_ENV_PROXY`; Node command-line flags (`--use-openssl-ca`, `--use-env-proxy`) and operating-system proxy or trust-store settings cannot be seen from inside the process and are not checked.
 - No real MCP or other client is involved; this is a plain CLI.
 
 ## Development

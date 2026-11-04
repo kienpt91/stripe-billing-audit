@@ -77,6 +77,18 @@ describe("the README", () => {
   });
 });
 
+describe("claims the code does not support", () => {
+  const files = ["README.md", "SECURITY.md", "docs/adr/0004-personal-data-policy.md", "docs/adr/0006-no-runtime-dependencies.md", "docs/adr/0002-read-only-by-construction.md"];
+
+  it("do not say that personal data is never requested: customer objects are retrieved for two checks", () => {
+    for (const f of files) expect(read(f), f).not.toMatch(/never requested|neither requested|nor requested|never fetched/i);
+  });
+
+  it("do not say that no package has an install script: the lock file lists optional native packages with one", () => {
+    for (const f of files) expect(read(f), f).not.toMatch(/none of the packages needs an install script|no dependency needs an install script|no package needs an install script/i);
+  });
+});
+
 describe("markdown links", () => {
   function markdownFiles(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {

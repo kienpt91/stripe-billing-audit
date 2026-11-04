@@ -6,8 +6,8 @@ $ STRIPE_API_KEY=<restricted live key> stripe-billing-audit
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:54:25Z, 10 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:44627; this is a test setup, not Stripe.
+Checked 2026-11-04T15:00:54Z, 10 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:43335; this is a test setup, not Stripe.
 
 No findings.
 
@@ -29,8 +29,8 @@ $ STRIPE_API_KEY=<restricted live key> stripe-billing-audit
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:54:25Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:45825; this is a test setup, not Stripe.
+Checked 2026-11-04T15:00:54Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:45419; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -88,7 +88,7 @@ Warning: API base overridden to http://127.0.0.1:45825; this is a test setup, no
 
 [HIGH] trial-ending-without-payment-method: 1 trial ending within 7 days with no payment method
   Evidence:
-    - sub_1Trial…; the first ends 2026-11-06 (in 2 days).
+    - sub_1Trial…; the first ends 2026-11-06 (in 1 days).
     - Behaviour when the trial ends without a payment method: create_invoice.
   Why it matters:
     When a trial ends with no payment method the first invoice cannot be paid: the customer is
@@ -138,8 +138,8 @@ $ stripe-billing-audit
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:54:26Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:35607; this is a test setup, not Stripe.
+Checked 2026-11-04T15:00:54Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:41801; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -261,10 +261,10 @@ $ stripe-billing-audit --markdown
 | Mode | live |
 | Key | restricted, read-only requests |
 | Account API version | `2025-09-30.clover` |
-| Checked | `2026-11-04T14:54:33Z` |
+| Checked | `2026-11-04T15:00:58Z` |
 | Tool | `stripe-billing-audit 0.1.0` |
 
-> Warning: `API base overridden to http://127.0.0.1:41605; this is a test setup, not Stripe.`
+> Warning: `API base overridden to http://127.0.0.1:45491; this is a test setup, not Stripe.`
 
 ## Summary
 
@@ -347,7 +347,7 @@ $ stripe-billing-audit --json
     "name": "stripe-billing-audit",
     "version": "0.1.0"
   },
-  "generatedAt": "2026-11-04T14:54:36Z",
+  "generatedAt": "2026-11-04T15:00:58Z",
   "account": {
     "id": "acct_1QAbCd…",
     "mode": "live",
@@ -402,7 +402,7 @@ $ stripe-billing-audit --json
     }
   ],
   "warnings": [
-    "API base overridden to http://127.0.0.1:36507; this is a test setup, not Stripe."
+    "API base overridden to http://127.0.0.1:35105; this is a test setup, not Stripe."
   ],
   "requests": {
     "used": 12
