@@ -61,6 +61,8 @@ function failure(key: FactKey, f: Failure, page: number): Fact<never> {
       return unreadable(key, "api_error", `the response was not valid JSON${where}`);
     case "too_large":
       return unreadable(key, "api_error", `the response was larger than the size limit${where}`);
+    case "rejected":
+      return unreadable(key, "api_error", `${http(f)}: Stripe rejected the request${code}${where}`);
     case "budget":
       return unreadable(key, "budget", `the request budget was spent${where}`);
     case "refused":

@@ -9,6 +9,7 @@ export type ApiFailureKind =
   | "timeout"
   | "malformed"
   | "too_large"
+  | "rejected"
   | "budget"
   | "refused";
 

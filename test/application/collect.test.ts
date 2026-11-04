@@ -139,6 +139,11 @@ describe("failures", () => {
     expect(facts.openInvoices).toMatchObject({ reason: "api_error", detail: "unexpected response shape" });
   });
 
+  it("reports a request Stripe rejected with its code", async () => {
+    const facts = await collect(healthyReader().on("/v1/products", fail("rejected", 400, "parameter_invalid")));
+    expect(facts.products).toMatchObject({ reason: "api_error", detail: "HTTP 400: Stripe rejected the request, parameter_invalid" });
+  });
+
   it("aborts the audit when the key is rejected, wherever that happens", async () => {
     await expect(collect(healthyReader().on("/v1/account", fail("auth", 401)))).rejects.toBeInstanceOf(AuthenticationError);
     await expect(collect(healthyReader().on("/v1/prices", fail("auth", 401)))).rejects.toThrow("HTTP 401");
