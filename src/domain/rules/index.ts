@@ -1,6 +1,7 @@
 import type { Rule } from "../rule.js";
 import { paymentMethodMissingOnActive, trialEndingWithoutPaymentMethod } from "./customers.js";
 import { subscriptionCancelWithoutWinback, subscriptionDelinquent } from "./subscriptions.js";
+import { dunningRetriesExhausted, invoiceStuckOpen, invoiceUncollectible } from "./invoices.js";
 import {
   webhookApiVersionDrift,
   webhookDeliveriesFailing,
@@ -26,4 +27,7 @@ export const RULES: readonly Rule[] = [
   subscriptionCancelWithoutWinback,
   paymentMethodMissingOnActive,
   trialEndingWithoutPaymentMethod,
+  invoiceStuckOpen,
+  invoiceUncollectible,
+  dunningRetriesExhausted,
 ];
