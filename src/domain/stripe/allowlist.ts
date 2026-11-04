@@ -11,7 +11,7 @@ const LIST_PARAMS = ["limit", "starting_after"] as const;
 const ALLOWED: ReadonlyArray<{ readonly path: string | RegExp; readonly params: readonly string[] }> = [
   { path: "/v1/account", params: [] },
   { path: "/v1/webhook_endpoints", params: LIST_PARAMS },
-  { path: "/v1/subscriptions", params: [...LIST_PARAMS, "status"] },
+  { path: "/v1/subscriptions", params: LIST_PARAMS },
   { path: "/v1/invoices", params: [...LIST_PARAMS, "status"] },
   { path: "/v1/prices", params: [...LIST_PARAMS, "active"] },
   { path: "/v1/products", params: [...LIST_PARAMS, "active"] },

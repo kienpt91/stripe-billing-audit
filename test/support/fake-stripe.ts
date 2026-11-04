@@ -87,7 +87,8 @@ export class FakeStripe {
       case "/v1/webhook_endpoints":
         return send(this.page(w.webhookEndpoints, q));
       case "/v1/subscriptions":
-        return send(this.page(q.get("status") === "all" || q.get("status") === null ? w.subscriptions : w.subscriptions.filter((s) => s.status === q.get("status")), q));
+        // like the real API: canceled subscriptions are not listed unless asked for
+        return send(this.page(w.subscriptions.filter((s) => s.status !== "canceled"), q));
       case "/v1/invoices":
         return send(this.page(w.invoices.filter((i) => q.get("status") === null || i.status === q.get("status")), q));
       case "/v1/prices":

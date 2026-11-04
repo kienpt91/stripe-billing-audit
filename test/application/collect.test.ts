@@ -29,7 +29,7 @@ describe("collectFacts on a healthy account", () => {
     expect(reader.calls.map((c) => `${c.path}?${new URLSearchParams(c.query)}`)).toEqual([
       "/v1/account?",
       "/v1/webhook_endpoints?limit=100",
-      "/v1/subscriptions?status=all&limit=100",
+      "/v1/subscriptions?limit=100",
       "/v1/invoices?status=open&limit=100",
       "/v1/invoices?status=uncollectible&limit=100",
       "/v1/prices?active=true&limit=100",

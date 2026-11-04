@@ -57,7 +57,7 @@ describe("parseApiBase", () => {
 describe("validateRead allowlist", () => {
   it("allows the endpoints the audit reads", () => {
     expect(validateRead("/v1/account", {}).ok).toBe(true);
-    expect(validateRead("/v1/subscriptions", { status: "all", limit: "100", starting_after: "sub_1" }).ok).toBe(true);
+    expect(validateRead("/v1/subscriptions", { limit: "100", starting_after: "sub_1" }).ok).toBe(true);
     expect(validateRead("/v1/customers/cus_ABC123", {}).ok).toBe(true);
     expect(validateRead("/v1/events", { delivery_success: "false", limit: "25" }).ok).toBe(true);
   });
@@ -73,6 +73,7 @@ describe("validateRead allowlist", () => {
     ["/v1/invoices", { status: "open&x=1" }],
     ["/v1/invoices", { status: "" }],
     ["/v1/prices", { status: "all" }],
+    ["/v1/subscriptions", { status: "all" }],
     ["//v1/account", {}],
     ["/v1/account?x=1", {}],
     ["/v1/account/", {}],

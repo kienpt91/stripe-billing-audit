@@ -144,7 +144,7 @@ export async function collectFacts(api: StripeReader, clock: Clock, mode: Mode, 
   const pages = options.maxPages;
   const account = await readAccount(api);
   const webhookEndpoints = await listAll(api, "webhookEndpoints", "/v1/webhook_endpoints", {}, decodeWebhookEndpoint, pages);
-  const subscriptions = await listAll(api, "subscriptions", "/v1/subscriptions", { status: "all" }, decodeSubscription, pages);
+  const subscriptions = await listAll(api, "subscriptions", "/v1/subscriptions", {}, decodeSubscription, pages);
   const openInvoices = await listAll(api, "openInvoices", "/v1/invoices", { status: "open" }, decodeInvoice, pages);
   const uncollectibleInvoices = await listAll(api, "uncollectibleInvoices", "/v1/invoices", { status: "uncollectible" }, decodeInvoice, pages);
   const prices = await listAll(api, "prices", "/v1/prices", { active: "true" }, decodePrice, pages);

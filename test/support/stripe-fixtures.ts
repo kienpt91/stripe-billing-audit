@@ -147,7 +147,8 @@ export function cleanWorld(now: number, livemode = true): World {
     stripeVersion: "2025-09-30.clover",
     account: { id: "acct_1QAbCdEfGhIjKlMn", object: "account", country: "US", default_currency: "usd", email: "owner@example.org", business_profile: { name: "Example Inc" } },
     webhookEndpoints: [webhookEndpoint(w)],
-    subscriptions: [subscription(w)],
+    // the canceled subscription is never listed by the API without status=canceled
+    subscriptions: [subscription(w), subscription(w, { id: "sub_1CanceledZzzzzzzz", status: "canceled", cancel_at_period_end: true })],
     invoices: [],
     prices: [price(w)],
     products: [product(w)],

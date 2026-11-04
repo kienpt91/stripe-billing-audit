@@ -22,7 +22,7 @@ A restricted key needs read access to the resource behind each endpoint the audi
 | --- | --- |
 | `/v1/account` | account id, country, default currency, default API version (from the `Stripe-Version` response header) |
 | `/v1/webhook_endpoints` | the webhook checks |
-| `/v1/subscriptions` (`status=all`) | the subscription, payment method, tax and currency checks |
+| `/v1/subscriptions` (every status except canceled, which is the API default) | the subscription, payment method, tax and currency checks |
 | `/v1/invoices` (`status=open`, `status=uncollectible`) | the invoice and dunning checks |
 | `/v1/prices`, `/v1/products` (`active=true`) | tax behavior, tax code and currency checks |
 | `/v1/billing_portal/configurations` | the Billing portal checks and the win-back check |

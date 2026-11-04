@@ -42,8 +42,8 @@ describe("a successful read", () => {
   });
 
   it("passes the allowlisted query parameters through", async () => {
-    await reader().get("/v1/subscriptions", { status: "all", limit: "100" });
-    expect(server.requests[0]?.query).toEqual({ status: "all", limit: "100" });
+    await reader().get("/v1/invoices", { status: "open", limit: "100" });
+    expect(server.requests[0]?.query).toEqual({ status: "open", limit: "100" });
   });
 });
 
