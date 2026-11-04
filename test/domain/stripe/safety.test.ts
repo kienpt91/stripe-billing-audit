@@ -91,6 +91,14 @@ describe("redactSecrets", () => {
     expect(redactSecrets("short", ["abc"])).toBe("short");
   });
 
+  it("finds a key glued to other word characters", () => {
+    const k = fakeKey("rk", "live");
+    expect(redactSecrets(`x${k}`)).toBe("x[redacted]");
+    expect(redactSecrets(`my_${k}_suffix`)).toBe("my_[redacted]_suffix");
+    expect(redactSecrets(`--${k}`)).toBe("--[redacted]");
+    expect(containsSecret(`prefix${k}`)).toBe(true);
+  });
+
   it("reports whether text holds a secret, repeatedly", () => {
     const k = fakeKey("rk", "test");
     expect(containsSecret(`x ${k}`)).toBe(true);

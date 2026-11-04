@@ -1,5 +1,8 @@
-/** Stripe API keys and webhook signing secrets have a recognisable shape. */
-const KEY_SHAPED = /\b(?:[rsp]k_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+)/g;
+/**
+ * Stripe API keys and webhook signing secrets have a recognisable shape. There is no word boundary in front:
+ * a key glued to other characters (`x` + key, `--` + key) is still a key.
+ */
+const KEY_SHAPED = /(?:[rsp]k_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+)/g;
 
 /**
  * Replaces anything that looks like a Stripe secret, and every exact secret passed in, by `[redacted]`.
