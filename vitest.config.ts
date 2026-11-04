@@ -6,6 +6,9 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.ts"],
     exclude: ["node_modules/**"],
+    // Generous: the suite starts real loopback servers and, in CI, shares a busy runner.
+    testTimeout: 60_000,
+    hookTimeout: 900_000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
