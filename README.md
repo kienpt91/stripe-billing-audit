@@ -35,8 +35,8 @@ The output below is real. It comes from `npm run demo`, which starts the real co
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:35:49Z, 10 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:33267; this is a test setup, not Stripe.
+Checked 2026-11-04T14:40:40Z, 10 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:34483; this is a test setup, not Stripe.
 
 No findings.
 
@@ -60,8 +60,8 @@ This is the beginning and the end of a report with 17 findings; the full transcr
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:35:50Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:33177; this is a test setup, not Stripe.
+Checked 2026-11-04T14:40:40Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:39341; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -119,7 +119,7 @@ Warning: API base overridden to http://127.0.0.1:33177; this is a test setup, no
 
 [HIGH] trial-ending-without-payment-method: 1 trial ending within 7 days with no payment method
   Evidence:
-    - sub_1Trial…; the first ends 2026-11-06 (in 1 days).
+    - sub_1Trial…; the first ends 2026-11-06 (in 2 days).
     - Behaviour when the trial ends without a payment method: create_invoice.
   Why it matters:
     When a trial ends with no payment method the first invoice cannot be paid: the customer is
@@ -162,8 +162,8 @@ The key may not read tax data or the Billing portal. The checks that need them a
 stripe-billing-audit 0.1.0: read-only Stripe billing audit
 Account acct_1QAbCd…, US, default currency usd
 Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
-Checked 2026-11-04T14:35:52Z, 12 requests (GET only)
-Warning: API base overridden to http://127.0.0.1:39349; this is a test setup, not Stripe.
+Checked 2026-11-04T14:40:41Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:36297; this is a test setup, not Stripe.
 
 [HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
   Evidence:
@@ -309,13 +309,13 @@ Run in a throwaway container, offline. Every test talks to an in-memory fake or 
 
 | Layer | Tests | What they cover |
 | --- | ---: | --- |
-| Domain | 141 | every rule over small fixtures (passed, failed, not applicable, skipped), severity and exit-code precedence, report model, key classification, API base restriction, path allowlist, redaction, request budget, calendar and money arithmetic, id shortening and URL masking; property tests for text sanitising, id truncation and calendar arithmetic |
+| Domain | 142 | every rule over small fixtures (passed, failed, not applicable, skipped), severity and exit-code precedence, report model, key classification, API base restriction, path allowlist, redaction, request budget, calendar and money arithmetic, id shortening and URL masking; property tests for text sanitising, id truncation and calendar arithmetic |
 | Application | 57 | decoders against hostile and random input (property test: never throws) and against fixtures with planted personal data; the collector against an in-memory API: pagination (property test: exactly `min(total, cap)` objects, no duplicates, whatever the page size), caps, non-advancing cursors, every failure kind, bounded customer lookup; terminal, Markdown and JSON renderers with golden files and property tests over hostile strings |
 | Infrastructure | 32 | the HTTP reader against a real loopback server: bearer key, allowlist refusal, 401/403/404/4xx, 429 with `Retry-After` and exponential backoff, 5xx, budget, timeout, size limit on a streamed body, invalid JSON, a redirect that must not be followed, unreachable host, key never echoed; the argument parser |
 | Architecture | 50 | the dependency rule over every source file, plus tests of the checker itself |
 | End to end | 115 | 110 through `runCli` with real `fetch` against the fake Stripe server (clean and troubled accounts, test and live keys, every exit code, thresholds, options, every output format, personal data and secrets never printed, a matrix of nine hostile answers on each of nine endpoints, an oversized body, a server that echoes the key); 5 through the compiled `dist/bin.js` as a child process in an empty directory (nothing is written there) |
 | Docs | 24 | `docs/checks.md` is generated from the rule catalogue and must match it, version and changelog agree, no runtime dependencies, exact pins, every option and exit code is in this README, no broken relative links |
-| **Total** | **419** | all passing |
+| **Total** | **420** | all passing |
 
 Coverage, measured with `npm run coverage` (V8; the thresholds below fail the run and CI):
 
