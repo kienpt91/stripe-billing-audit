@@ -22,6 +22,12 @@ const EXTERNAL_OK: Record<Layer, boolean> = { domain: false, application: false,
 const FORBIDDEN_IN_PURE =
   /\bDate\.now\b|\bnew Date\b|Math\.random|performance\.now|\bprocess\.|\brequire\(|\bfetch\(|\bsetTimeout\b|\bsetInterval\b|\bglobalThis\b|\bcrypto\.|\bconsole\./;
 
+/**
+ * The tool never writes to disk, spawns processes or opens sockets of its own: the only network access is
+ * global `fetch`. Nothing in src may import these modules.
+ */
+const FORBIDDEN_MODULES = /^(node:)?(fs|fs\/promises|child_process|net|tls|http|https|http2|dgram|dns|cluster|worker_threads|vm|inspector)$/;
+
 /** Only the composition layer may read the environment. */
 const ENV_ACCESS = /\bprocess\.env\b/;
 
@@ -55,6 +61,7 @@ export function violations(file: string, source: string): string[] {
     } else if (!EXTERNAL_OK[layer]) {
       found.push(`${layer} must not import ${spec}`);
     }
+    if (FORBIDDEN_MODULES.test(spec)) found.push(`${layer} imports ${spec}: the tool has no filesystem, process or raw network access`);
   }
   if ((layer === "domain" || layer === "application") && FORBIDDEN_IN_PURE.test(code)) {
     found.push(`${layer} touches the clock, randomness, IO or the process`);
@@ -73,6 +80,10 @@ function walk(dir: string): string[] {
 
 describe("dependency rule over the real source tree", () => {
   const files = walk(SRC);
+
+  it("finds the source files of every layer", () => {
+    expect([...new Set(files.map(layerOf))].sort()).toEqual(["application", "composition", "domain", "entry", "infrastructure"]);
+  });
 
   it.each(files.map((f) => [relative(SRC, f), f] as const))("%s respects the layers", (_name, file) => {
     expect(violations(file, readFileSync(file, "utf8"))).toEqual([]);
@@ -93,7 +104,7 @@ describe("the checker itself", () => {
   });
 
   it("flags node built-ins and packages in the pure layers", () => {
-    expect(violations(domainFile, 'import { readFile } from "node:fs";')).toHaveLength(1);
+    expect(violations(domainFile, 'import { readFile } from "node:fs";')).not.toEqual([]);
     expect(violations(appFile, 'import pg from "pg";')).toHaveLength(1);
     expect(violations(domainFile, 'const m = await import("node:crypto");')).toHaveLength(1);
     expect(violations(domainFile, 'import "node:os";')).toHaveLength(1);
@@ -110,6 +121,14 @@ describe("the checker itself", () => {
     expect(violations(domainFile, "const e = process.argv;")).toHaveLength(1);
     expect(violations(appFile, 'await fetch("x");')).toHaveLength(1);
     expect(violations(appFile, "console.log(1);")).toHaveLength(1);
+  });
+
+  it("forbids filesystem, process and raw network modules everywhere", () => {
+    for (const m of ["node:fs", "fs", "node:fs/promises", "node:child_process", "node:net", "node:http", "node:https", "node:dns", "node:vm"]) {
+      expect(violations(infraFile, `import x from "${m}";`), m).not.toEqual([]);
+      expect(violations(compFile, `import x from "${m}";`), m).not.toEqual([]);
+    }
+    expect(violations(infraFile, 'import { parseArgs } from "node:util";')).toEqual([]);
   });
 
   it("allows the environment only in the composition layer", () => {
