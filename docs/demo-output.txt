@@ -1,0 +1,345 @@
+
+====================================================================================================
+# A healthy account
+$ STRIPE_API_KEY=<restricted live key> stripe-billing-audit
+====================================================================================================
+stripe-billing-audit 0.1.0: read-only Stripe billing audit
+Account acct_1QAbCd…, US, default currency usd
+Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
+Checked 2026-11-04T14:35:49Z, 10 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:33267; this is a test setup, not Stripe.
+
+No findings.
+
+Checks not run (switched off by the options):
+  - webhook-deliveries-failing: not requested; events can embed personal data, pass --include-events
+    to read them
+
+Not readable through the Stripe API (see --checklist for what to check by hand):
+- Retry schedule and the state after the last retry
+- Failed-payment and renewal emails
+
+Summary: 0 findings; checks: 22 passed, 0 failed, 2 not applicable, 1 skipped; exit code 0 (nothing at or above the fail-on severity)
+[exit code 0]  (10 requests, all GET)
+
+====================================================================================================
+# An account with billing gaps
+$ STRIPE_API_KEY=<restricted live key> stripe-billing-audit
+====================================================================================================
+stripe-billing-audit 0.1.0: read-only Stripe billing audit
+Account acct_1QAbCd…, US, default currency usd
+Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
+Checked 2026-11-04T14:35:50Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:33177; this is a test setup, not Stripe.
+
+[HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
+  Evidence:
+    - Not delivered to any enabled endpoint: customer.subscription.updated,
+      customer.subscription.deleted, invoice.payment_failed.
+    - we_1HttpE… (http://hooks.example.com/stripe/…) subscribes to 2 events.
+  Why it matters:
+    A subscription business learns about renewals, failures and cancellations through these events.
+    If one is not delivered to anything, your records and the customer's access stop matching what
+    Stripe bills.
+  Fix:
+    Add the missing events to an enabled endpoint (or use all events), and make the handler
+    idempotent on the event id. Handle checkout.session.completed to provision, invoice.paid to
+    extend access, invoice.payment_failed to start recovery, customer.subscription.updated and
+    customer.subscription.deleted to change or end access.
+
+[HIGH] webhook-endpoint-http: 1 endpoint on plain HTTP
+  Evidence:
+    - we_1HttpE… (http://hooks.example.com/stripe/…) uses http.
+  Why it matters:
+    Event payloads carry billing data and travel in clear over HTTP, and the request cannot be
+    trusted to come from where it claims. Stripe requires HTTPS for live-mode endpoints.
+  Fix:
+    Serve the endpoint over HTTPS with a valid certificate and update the endpoint URL. Keep
+    verifying the Stripe-Signature header regardless of the transport.
+
+[HIGH] subscription-delinquent: 1 subscription failing for 7+ days
+  Evidence:
+    - past_due: 1 subscription, oldest since 2026-09-30 (35 days): sub_1PastD….
+    - Threshold: 7 days, counted from the oldest open invoice of the subscription, or from the start
+      of its current period when no open invoice was listed (so a lower bound).
+  Why it matters:
+    A subscription that stays in a failing state is revenue you are owed and have not collected, and
+    usually a customer who still has, or has silently lost, access. The longer it lasts the less
+    likely it is recovered.
+  Fix:
+    Decide the end state of failed payments (Dashboard, Billing, Revenue recovery: cancel, mark
+    unpaid or leave past due), contact the customers with the oldest failures, and make the
+    application treat past_due and unpaid explicitly instead of as active. The Billing portal link
+    lets a customer update the card themselves.
+
+[HIGH] customer-no-default-payment-method: 1 subscription with no payment method on file, set to charge automatically
+  Evidence:
+    - 1 subscription: sub_1PastD….
+    - Neither the subscription nor its customer has a default payment method or source.
+  Why it matters:
+    A subscription set to charge automatically with no default payment method on the subscription or
+    the customer will fail its next renewal. It becomes past_due, costs a failed-payment cycle and
+    often a customer.
+  Fix:
+    Ask these customers to add a payment method (the Billing portal's update-payment-method link
+    works), or switch the subscription to send_invoice if invoicing is intended. Collect the payment
+    method at checkout with setup_future_usage or a Checkout subscription session so it is saved as
+    the default.
+
+[HIGH] trial-ending-without-payment-method: 1 trial ending within 7 days with no payment method
+  Evidence:
+    - sub_1Trial…; the first ends 2026-11-06 (in 1 days).
+    - Behaviour when the trial ends without a payment method: create_invoice.
+  Why it matters:
+    When a trial ends with no payment method the first invoice cannot be paid: the customer is
+    cancelled, paused or left past due, depending on the trial settings, at the moment they have
+    just decided to stay.
+  Fix:
+    Collect a payment method before the trial ends (Checkout with payment_method_collection=always,
+[... 140 lines left out of this transcript ...]
+[LOW] currency-mixed: 2 currencies in use
+  Evidence:
+    - Active recurring prices: eur (1), usd (1).
+    - Live subscriptions: eur (1), usd (4).
+    - Account default currency: usd.
+  Why it matters:
+    Several currencies multiply the reporting, tax and reconciliation work, expose you to
+    exchange-rate swings on settlement and make revenue figures hard to compare. It is sometimes
+    deliberate, so this is for review, not a defect.
+  Fix:
+    Confirm that each currency is intended. If not, archive the prices in the stray currency and
+    move the subscriptions. If it is, make sure your reporting, tax settings and payouts handle each
+    currency.
+
+Checks not run (switched off by the options):
+  - webhook-deliveries-failing: not requested; events can embed personal data, pass --include-events
+    to read them
+
+Not readable through the Stripe API (see --checklist for what to check by hand):
+- Retry schedule and the state after the last retry
+- Failed-payment and renewal emails
+
+Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped; exit code 1 (findings at or above medium)
+[exit code 1]  (12 requests, all GET)
+
+====================================================================================================
+# The same account, gating only on critical findings
+$ stripe-billing-audit --fail-on critical
+====================================================================================================
+[... 231 lines left out of this transcript ...]
+
+Summary: 17 findings (7 high, 6 medium, 4 low); checks: 4 passed, 17 failed, 3 not applicable, 1 skipped; exit code 0 (nothing at or above the fail-on severity)
+[exit code 0]  (12 requests, all GET)
+
+====================================================================================================
+# A key that cannot read tax data or the Billing portal
+$ stripe-billing-audit
+====================================================================================================
+stripe-billing-audit 0.1.0: read-only Stripe billing audit
+Account acct_1QAbCd…, US, default currency usd
+Mode: LIVE   Key: restricted   Account API version: 2025-09-30.clover
+Checked 2026-11-04T14:35:52Z, 12 requests (GET only)
+Warning: API base overridden to http://127.0.0.1:39349; this is a test setup, not Stripe.
+
+[HIGH] webhook-lifecycle-events-missing: 3 subscription lifecycle events not delivered
+  Evidence:
+    - Not delivered to any enabled endpoint: customer.subscription.updated,
+      customer.subscription.deleted, invoice.payment_failed.
+    - we_1HttpE… (http://hooks.example.com/stripe/…) subscribes to 2 events.
+  Why it matters:
+[... 162 lines left out of this transcript ...]
+    lacks the read permission for this resource
+  - portal-missing: billing portal configurations: HTTP 403: the key lacks the read permission for
+    this resource
+  - portal-no-payment-method-update: billing portal configurations: HTTP 403: the key lacks the read
+    permission for this resource
+  - portal-no-cancellation: billing portal configurations: HTTP 403: the key lacks the read
+    permission for this resource
+  - portal-no-legal-links: billing portal configurations: HTTP 403: the key lacks the read
+    permission for this resource
+  - tax-automatic-disabled: tax registrations: HTTP 403: the key lacks the read permission for this
+    resource
+  - tax-settings-incomplete: tax settings: HTTP 403: the key lacks the read permission for this
+    resource
+
+Checks not run (switched off by the options):
+  - webhook-deliveries-failing: not requested; events can embed personal data, pass --include-events
+    to read them
+
+Not readable through the Stripe API (see --checklist for what to check by hand):
+- Retry schedule and the state after the last retry
+- Failed-payment and renewal emails
+
+Summary: 13 findings (5 high, 5 medium, 3 low); checks: 4 passed, 13 failed, 0 not applicable, 8 skipped; exit code 4 (checks skipped for lack of permission)
+[exit code 4]  (12 requests, all GET)
+
+====================================================================================================
+# An unrestricted secret key is refused
+$ STRIPE_API_KEY=<secret key> stripe-billing-audit
+====================================================================================================
+[stderr]
+stripe-billing-audit: STRIPE_API_KEY is an unrestricted secret key (sk_...). Create a restricted key with read permissions, or pass --allow-unrestricted-key to accept the risk.
+Run with --help for usage.
+[exit code 2]  (no requests were made)
+
+====================================================================================================
+# A report to hand to a client
+$ stripe-billing-audit --markdown
+====================================================================================================
+# Stripe billing audit
+
+| | |
+| --- | --- |
+| Account | `acct_1QAbCd…` |
+| Mode | live |
+| Key | restricted, read-only requests |
+| Account API version | `2025-09-30.clover` |
+| Checked | `2026-11-04T14:35:53Z` |
+| Tool | `stripe-billing-audit 0.1.0` |
+
+> Warning: `API base overridden to http://127.0.0.1:40599; this is a test setup, not Stripe.`
+
+## Summary
+
+| Severity | Findings |
+| --- | ---: |
+| Critical | 0 |
+| High | 7 |
+| Medium | 6 |
+| Low | 4 |
+| Info | 0 |
+
+25 checks ran: 4 passed, 17 failed, 3 not applicable, 1 skipped.
+
+## Findings
+
+### High
+
+#### `webhook-lifecycle-events-missing`: 3 subscription lifecycle events not delivered
+
+**Evidence**
+
+```
+Not delivered to any enabled endpoint: customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed.
+we_1HttpE… (http://hooks.example.com/stripe/…) subscribes to 2 events.
+```
+
+**Why it matters**
+
+A subscription business learns about renewals, failures and cancellations through these events. If one is not delivered to anything, your records and the customer's access stop matching what Stripe bills.
+
+**Suggested fix**
+
+Add the missing events to an enabled endpoint (or use all events), and make the handler idempotent on the event id. Handle checkout.session.completed to provision, invoice.paid to extend access, invoice.payment_failed to start recovery, customer.subscription.updated and customer.subscription.deleted to change or end access.
+
+#### `webhook-endpoint-http`: 1 endpoint on plain HTTP
+
+**Evidence**
+
+```
+we_1HttpE… (http://hooks.example.com/stripe/…) uses http.
+```
+
+**Why it matters**
+
+Event payloads carry billing data and travel in clear over HTTP, and the request cannot be trusted to come from where it claims. Stripe requires HTTPS for live-mode endpoints.
+
+**Suggested fix**
+
+[... 255 lines left out of this transcript ...]
+
+Confirm that each currency is intended. If not, archive the prices in the stray currency and move the subscriptions. If it is, make sure your reporting, tax settings and payouts handle each currency.
+
+## Checks not run
+
+These checks were switched off by the options of this run.
+
+| Check | Reason |
+| --- | --- |
+| `webhook-deliveries-failing` | `not requested; events can embed personal data, pass --include-events to read them` |
+
+## Not visible through the Stripe API
+
+These matter for reliable billing but Stripe does not expose them, so they were not guessed. Check them by hand:
+
+- **Retry schedule and the state after the last retry**: Dashboard, Billing, Revenue recovery, Retries. Smart Retries (or a custom schedule) is on, the number of retries and the window suit your product, and the setting for what happens to the subscription when the last retry fails (cancel, mark unpaid, leave past due) matches how your application treats access. Retry settings cannot be read through the API.
+- **Failed\-payment and renewal emails**: Dashboard, Settings, Billing, Subscriptions and emails. Emails for failed payments, upcoming renewals and expiring cards are on or replaced by your own, and each carries a link where the customer can update the card (a Billing portal session). Email settings cannot be read through the API.
+
+## Scope and method
+
+The audit made 12 read-only GET requests to a fixed list of Stripe endpoints. It wrote nothing to the account. It does not request customer emails, names or addresses, and this report contains none; object ids are shortened. The API key is not stored or printed.
+[exit code 1]  (12 requests, all GET)
+
+====================================================================================================
+# Machine-readable output
+$ stripe-billing-audit --json
+====================================================================================================
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "stripe-billing-audit",
+    "version": "0.1.0"
+  },
+  "generatedAt": "2026-11-04T14:35:54Z",
+  "account": {
+    "id": "acct_1QAbCd…",
+    "mode": "live",
+    "keyKind": "restricted",
+    "country": "US",
+    "defaultCurrency": "usd",
+    "apiVersion": "2025-09-30.clover"
+  },
+  "options": {
+    "failOn": "medium",
+    "thresholds": {
+      "pastDueDays": 7,
+      "trialDays": 7,
+      "staleInvoiceDays": 14
+    },
+    "customerLookup": true,
+    "includeEvents": false
+  },
+  "summary": {
+    "findings": 17,
+    "bySeverity": {
+      "critical": 0,
+      "high": 7,
+      "medium": 6,
+      "low": 4,
+      "info": 0
+    },
+    "checks": {
+      "passed": 4,
+      "failed": 17,
+      "not_applicable": 3,
+      "skipped": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "webhook-lifecycle-events-missing",
+[... 383 lines left out of this transcript ...]
+  ],
+  "truncated": [],
+  "ignoredObjects": 0,
+  "notReadable": [
+    {
+      "id": "retry-schedule",
+      "area": "Failed payments",
+      "title": "Retry schedule and the state after the last retry"
+    },
+    {
+      "id": "dunning-emails",
+      "area": "Failed payments",
+      "title": "Failed-payment and renewal emails"
+    }
+  ],
+  "warnings": [
+    "API base overridden to http://127.0.0.1:39373; this is a test setup, not Stripe."
+  ],
+  "requests": {
+    "used": 12
+  },
+  "exitCode": 1
+}
+[exit code 1]  (12 requests, all GET)
